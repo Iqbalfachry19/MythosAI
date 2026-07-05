@@ -4,10 +4,11 @@
  *
  * Pipeline:
  *   1. Validate input premise
- *   2. Break premise into scenes   (LLM or mock)
- *   3. For each scene in parallel:
- *        a. Generate shot list      (LLM or mock)
- *        b. Enrich with multimodal  (HF Image + HF Audio, graceful fallback)
+ *   2. Break premise into scenes        (LLM or mock)
+ *   3. For each scene, sequentially:
+ *        a. Generate shot list           (LLM or mock)
+ *        b. Enrich with multimodal ONLY for scene 1
+ *           (avoids 429 quota burst — remaining scenes get empty assets)
  *   4. Return enriched StoryOutput JSON
  */
 
@@ -64,25 +65,28 @@ export async function generateStory(req, res, next) {
     const scenes = await breakIntoScenes(premise);
     console.log(`[storyController] ${scenes.length} scenes broken down.`);
 
-    // ── Step 2: Parallel enrichment per scene ───────────────────────────────
-    const enrichedScenes = await Promise.all(
-      scenes.map(async (scene) => {
-        // Shot list + multimodal run concurrently
-        const [shots, assets] = await Promise.all([
-          generateShotList(scene).catch((err) => {
-            console.error(`[storyController] Shot list failed for scene ${scene.sceneNumber}:`, err.message);
-            return []; // Return empty shots rather than failing the whole request
-          }),
-          enrichSceneWithMultimodal(scene, []).then(async (assets) => {
-            // Re-enrich once shots are ready if shot list succeeded synchronously
-            // (assets is still returned quickly without waiting for shot re-computation)
-            return assets;
-          }),
-        ]);
+    // ── Step 2: Sequential enrichment per scene ─────────────────────────────
+    // Process one scene at a time to avoid bursting the Gemini quota (429).
+    // Multimodal assets (image + audio) are only generated for scene 1;
+    // remaining scenes receive null assets so the dashboard still renders.
+    const enrichedScenes = [];
+    for (const scene of scenes) {
+      const isFirst = scene.sceneNumber === 1;
 
-        return { scene, shots, assets };
-      })
-    );
+      const shots = await generateShotList(scene).catch((err) => {
+        console.error(`[storyController] Shot list failed for scene ${scene.sceneNumber}:`, err.message);
+        return [];
+      });
+
+      const assets = isFirst
+        ? await enrichSceneWithMultimodal(scene, shots).catch((err) => {
+            console.error(`[storyController] Multimodal failed for scene 1:`, err.message);
+            return { image: null, audio: null };
+          })
+        : { image: null, audio: null };
+
+      enrichedScenes.push({ scene, shots, assets });
+    }
 
     // ── Step 3: Build response ───────────────────────────────────────────────
     /** @type {import("../services/types.js").StoryOutput} */

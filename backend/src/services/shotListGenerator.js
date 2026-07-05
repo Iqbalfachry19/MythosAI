@@ -1,27 +1,37 @@
 /**
  * shotListGenerator.js
- * Generates a cinematic shot list for each scene using an LLM.
- * Falls back to deterministic mock data when no OpenAI key is present.
+ * Generates a cinematic shot list for each scene using Google Gemini.
+ * Falls back to deterministic mock data when no Gemini key is present.
  */
 
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 
-const USE_MOCK = !process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.startsWith("sk-...");
-const openai = USE_MOCK ? null : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const USE_MOCK = !process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith("AIza...");
 
-const SHOT_SYSTEM_PROMPT = `You are a cinematographer and director of photography.
-Given a scene description, generate exactly 3–4 shots for that scene.
+const ai = USE_MOCK ? null : new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+
+const SHOT_PROMPT_TEMPLATE = (scene) =>
+  `You are a cinematographer and director of photography.
+Given the scene below, generate exactly 3–4 shots.
 Each shot must be a JSON object:
 {
   "shotNumber": number,
-  "shotType": string,       // e.g. "ECU", "CU", "MS", "WS", "EWS", "POV", "OTS"
-  "cameraAngle": string,    // e.g. "eye-level", "low-angle", "high-angle", "dutch tilt"
-  "cameraMovement": string, // e.g. "static", "slow dolly in", "tracking", "handheld"
-  "lens": string,           // e.g. "35mm", "85mm telephoto", "wide angle 18mm"
-  "description": string,    // what the camera sees in 1 sentence
-  "imagePrompt": string     // detailed prompt for storyboard image generation
+  "shotType": string,       
+  "cameraAngle": string,    
+  "cameraMovement": string, 
+  "lens": string,           
+  "description": string,    
+  "imagePrompt": string     
 }
-Return ONLY a valid JSON array.`;
+Return ONLY a valid JSON array, no markdown fences, no commentary.
+
+SCENE ${scene.sceneNumber}: ${scene.title}
+SETTING: ${scene.setting}
+TIME: ${scene.timeOfDay}
+CHARACTERS: ${scene.characters.join(", ")}
+DESCRIPTION: ${scene.description}
+TONE: ${scene.emotionalTone}`;
 
 /**
  * @param {import("./types.js").Scene} scene
@@ -32,24 +42,21 @@ export async function generateShotList(scene) {
     return buildMockShots(scene);
   }
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: SHOT_SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: `SCENE ${scene.sceneNumber}: ${scene.title}\nSETTING: ${scene.setting}\nDESCRIPTION: ${scene.description}`,
-      },
-    ],
-    temperature: 0.6,
+  const response = await ai.models.generateContent({
+    model: MODEL_NAME,
+    contents: SHOT_PROMPT_TEMPLATE(scene),
+    config: {
+      responseMimeType: "application/json",
+      temperature: 0.6,
+    },
   });
 
-  const raw = completion.choices[0].message.content;
-  const parsed = JSON.parse(raw);
+  const text = response.text;
+
+  const parsed = JSON.parse(text);
   const shots = Array.isArray(parsed) ? parsed : parsed.shots ?? Object.values(parsed)[0];
 
-  if (!Array.isArray(shots)) throw new Error("LLM returned unexpected shape for shots.");
+  if (!Array.isArray(shots)) throw new Error("Gemini returned unexpected shape for shots.");
   return shots;
 }
 

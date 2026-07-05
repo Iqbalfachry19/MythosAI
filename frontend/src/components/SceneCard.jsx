@@ -59,11 +59,17 @@ export default function SceneCard({ enrichedScene }) {
           ) : (
             <div className="aspect-video flex flex-col items-center justify-center text-slate-600 text-xs gap-1 p-4 text-center">
               <span className="text-2xl">🖼</span>
-              <span>Image unavailable</span>
-              {assets?.image?.error && (
-                <span className="text-red-500/70 text-[10px] mt-1 leading-tight">
-                  {assets.image.error}
-                </span>
+              {assets?.image === null ? (
+                <span className="text-slate-500">Generated for Scene 1 only</span>
+              ) : (
+                <>
+                  <span>Image unavailable</span>
+                  {assets?.image?.error && (
+                    <span className="text-red-500/70 text-[10px] mt-1 leading-tight">
+                      {assets.image.error}
+                    </span>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -82,17 +88,23 @@ export default function SceneCard({ enrichedScene }) {
                 className="w-full mt-2"
                 style={{ height: "32px" }}
               >
-                <source src={assets.audio.dataUri} type="audio/wav" />
+                <source src={assets.audio.dataUri} type="audio/mp3" />
                 Your browser does not support audio.
               </audio>
             ) : (
               <div className="text-slate-600 text-xs flex flex-col gap-1 mt-2">
                 <span className="text-2xl">🔇</span>
-                <span>Audio unavailable</span>
-                {assets?.audio?.error && (
-                  <span className="text-red-500/70 text-[10px] leading-tight">
-                    {assets.audio.error}
-                  </span>
+                {assets?.audio === null ? (
+                  <span className="text-slate-500">Generated for Scene 1 only</span>
+                ) : (
+                  <>
+                    <span>Audio unavailable</span>
+                    {assets?.audio?.error && (
+                      <span className="text-red-500/70 text-[10px] leading-tight">
+                        {assets.audio.error}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             )}

@@ -1,17 +1,18 @@
 /**
  * sceneBreaker.js
  * Converts a raw story premise into a structured array of scenes.
- * Uses OpenAI when the API key is configured; falls back to deterministic mock data.
+ * Uses Google Gemini when the API key is configured; falls back to deterministic mock data.
  */
 
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 
-const USE_MOCK = !process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.startsWith("sk-...");
+const USE_MOCK = !process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith("AIza...");
 
-const openai = USE_MOCK ? null : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const ai = USE_MOCK ? null : new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
-const SCENE_SYSTEM_PROMPT = `You are a professional screenplay analyst and story structure expert.
-Given a story premise or synopsis, break it into 3–6 distinct scenes.
+const SCENE_PROMPT_TEMPLATE = (premise) => `You are a professional screenplay analyst and story structure expert.
+Given the story premise below, break it into 3–6 distinct scenes.
 For each scene return a JSON object with exactly these fields:
 {
   "sceneNumber": number,
@@ -19,11 +20,14 @@ For each scene return a JSON object with exactly these fields:
   "setting": string,
   "timeOfDay": "DAY" | "NIGHT" | "DAWN" | "DUSK",
   "characters": string[],
-  "description": string,          // 2–3 sentences max
-  "emotionalTone": string,        // e.g. "tense", "hopeful", "melancholic"
-  "audioMoodPrompt": string       // short phrase for audio generation
+  "description": string,
+  "emotionalTone": string,
+  "audioMoodPrompt": string
 }
-Return ONLY a valid JSON array, no markdown, no commentary.`;
+Return ONLY a valid JSON array, no markdown fences, no commentary.
+
+PREMISE:
+${premise}`;
 
 /**
  * @param {string} premise
@@ -31,27 +35,25 @@ Return ONLY a valid JSON array, no markdown, no commentary.`;
  */
 export async function breakIntoScenes(premise) {
   if (USE_MOCK) {
-    console.warn("[sceneBreaker] No OpenAI key — using mock scenes.");
+    console.warn("[sceneBreaker] No Gemini key — using mock scenes.");
     return buildMockScenes(premise);
   }
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: SCENE_SYSTEM_PROMPT },
-      { role: "user", content: `PREMISE:\n${premise}` },
-    ],
-    temperature: 0.7,
+  const response = await ai.models.generateContent({
+    model: MODEL_NAME,
+    contents: SCENE_PROMPT_TEMPLATE(premise),
+    config: {
+      responseMimeType: "application/json",
+      temperature: 0.7,
+    },
   });
 
-  const raw = completion.choices[0].message.content;
+  const text = response.text;
 
-  // The model wraps the array in an object — unwrap safely
-  const parsed = JSON.parse(raw);
+  const parsed = JSON.parse(text);
   const scenes = Array.isArray(parsed) ? parsed : parsed.scenes ?? Object.values(parsed)[0];
 
-  if (!Array.isArray(scenes)) throw new Error("LLM returned unexpected shape for scenes.");
+  if (!Array.isArray(scenes)) throw new Error("Gemini returned unexpected shape for scenes.");
   return scenes;
 }
 
