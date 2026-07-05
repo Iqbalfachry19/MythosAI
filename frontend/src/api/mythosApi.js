@@ -9,10 +9,39 @@ const client = axios.create({
 /**
  * Submit a story premise and get back the full enriched StoryOutput.
  * @param {string} premise
- * @returns {Promise<import("../types/story.js").StoryOutput>}
  */
 export async function generateStory(premise) {
   const response = await client.post("/generate-story", { premise });
+  return response.data;
+}
+
+// ── Multimodal RAG ────────────────────────────────────────────────────────────
+
+/**
+ * Ingest a single asset from a public URL (YouTube / image / audio).
+ * The backend auto-detects type and generates a description.
+ * @param {{ url: string, label?: string, description?: string, mediaType?: string, metadata?: object }} payload
+ */
+export async function ragIngestUrl(payload) {
+  const response = await client.post("/rag/ingest-url", payload);
+  return response.data;
+}
+
+/**
+ * Ingest a single asset with a manual descriptor.
+ * @param {{ mediaType: string, label: string, description: string, url?: string, metadata?: object }} payload
+ */
+export async function ragIngest(payload) {
+  const response = await client.post("/rag/ingest", payload);
+  return response.data;
+}
+
+/**
+ * Semantic similarity search. Returns results ranked by score (highest first).
+ * @param {{ query: string, topK?: number, mediaType?: string|null }} payload
+ */
+export async function ragSearch(payload) {
+  const response = await client.post("/rag/search", payload);
   return response.data;
 }
 

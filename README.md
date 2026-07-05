@@ -1,9 +1,11 @@
 # MythosAI 🎬
 
-**AI Creative Partner Suite & Multimodal Storytelling Platform**
+**AI Creative Partner Suite — Multimodal Storytelling + Media RAG Platform**
 
-MythosAI takes a raw story premise and produces a complete creative production package:
-scenes, shot lists, storyboard images, and ambient audio — all in one dashboard.
+MythosAI has two core features:
+
+1. **Story Generator** — takes a raw premise and produces scenes, shot lists, storyboard images, and ambient audio.
+2. **Media RAG** — index images, audio files, and YouTube videos by URL, then search them semantically using natural language. Results are ranked by cosine similarity.
 
 ---
 
@@ -13,32 +15,39 @@ scenes, shot lists, storyboard images, and ambient audio — all in one dashboar
 mythosai/
 ├── backend/          # Node.js / Express API
 │   ├── src/
-│   │   ├── server.js                        # Entry point
+│   │   ├── server.js
 │   │   ├── routes/
-│   │   │   ├── story.js                     # POST /api/generate-story
-│   │   │   └── export.js                    # POST /api/export/{pdf,markdown}
+│   │   │   ├── story.js            # POST /api/generate-story
+│   │   │   ├── export.js           # POST /api/export/{pdf,markdown}
+│   │   │   └── rag.js              # POST /api/rag/{ingest,ingest-url,ingest-batch,search}
 │   │   ├── controllers/
-│   │   │   ├── storyController.js           # Pipeline orchestrator
-│   │   │   └── exportController.js          # PDF + Markdown export
+│   │   │   ├── storyController.js
+│   │   │   ├── exportController.js
+│   │   │   └── ragController.js
 │   │   └── services/
-│   │       ├── sceneBreaker.js              # LLM scene breakdown
-│   │       ├── shotListGenerator.js         # LLM shot list generation
-│   │       ├── multimodalClient.js          # HF Image + Audio API client
-│   │       └── types.js                     # JSDoc type definitions
+│   │       ├── sceneBreaker.js       # Gemini scene breakdown
+│   │       ├── shotListGenerator.js  # Gemini shot list
+│   │       ├── multimodalClient.js   # Gemini image + Lyria audio generation
+│   │       ├── urlResolver.js        # YouTube / image / audio URL → descriptor
+│   │       ├── embedder.js           # Gemini text-embedding-004 (768d)
+│   │       ├── astraClient.js        # AstraDB singleton + vector search
+│   │       ├── mediaRag.js           # ingestMedia / ingestUrl / searchMedia
+│   │       └── types.js
 │   ├── .env.example
 │   └── package.json
 │
 └── frontend/         # React + Vite + Tailwind
     ├── src/
     │   ├── main.jsx
-    │   ├── App.jsx
+    │   ├── App.jsx                   # Top-level nav: Story Generator ↔ Media RAG
     │   ├── index.css
     │   ├── api/
-    │   │   └── mythosApi.js                 # Axios API client
+    │   │   └── mythosApi.js          # generateStory, ragIngestUrl, ragIngest, ragSearch, export
     │   └── components/
-    │       ├── PremiseForm.jsx              # Story input UI
-    │       ├── StoryDashboard.jsx           # Tabbed scene navigator
-    │       └── SceneCard.jsx                # Scene detail + assets
+    │       ├── PremiseForm.jsx       # Story input UI
+    │       ├── StoryDashboard.jsx    # Tabbed scene navigator
+    │       ├── SceneCard.jsx         # Scene detail + storyboard + audio
+    │       └── MediaRagPage.jsx      # Ingest (URL / manual) + Search with ranked results
     ├── index.html
     ├── vite.config.js
     ├── tailwind.config.js
@@ -49,19 +58,41 @@ mythosai/
 
 ## Pipeline
 
+### Story Generator
+
 ```
-User Premise (text)
-       │
-       ▼
- sceneBreaker.js  ──── GPT-4o-mini ──→  Scene[]
-       │
-       ├── For each Scene (parallel):
-       │       ├── shotListGenerator.js  ──── GPT-4o-mini ──→ Shot[]
-       │       └── multimodalClient.js
-       │               ├── generateStoryboardImage()  ──→ HF SDXL   → base64 PNG
-       │               └── generateAudioMood()        ──→ HF MusicGen → base64 WAV
-       ▼
- StoryOutput JSON  ──→  Frontend Dashboard  ──→  PDF / Markdown export
+User Premise
+     │
+     ▼
+sceneBreaker.js  ── Gemini 2.0 Flash ──→ Scene[]
+     │
+     ├── For each Scene:
+     │       ├── shotListGenerator.js  ── Gemini ──→ Shot[]
+     │       └── multimodalClient.js
+     │               ├── generateStoryboardImage()  ── Gemini Image ──→ base64 PNG
+     │               └── generateAudioMood()        ── Lyria 3      ──→ base64 MP3
+     ▼
+StoryOutput JSON ──→ Frontend Dashboard ──→ PDF / Markdown export
+```
+
+### Media RAG
+
+```
+URL (YouTube / image / audio)
+     │
+     ▼
+urlResolver.js
+     ├── YouTube  → oEmbed + ytdl-core  → title, channel, duration, tags
+     ├── Image    → fetch binary        → Gemini Vision caption
+     └── Audio    → fetch binary        → Gemini audio description
+     │
+     ▼
+embedder.js  ── Gemini text-embedding-004 ──→ 768-dim vector
+     │
+     ▼
+astraClient.js ──→ AstraDB (cosine similarity collection)
+
+Search:  query → embed → AstraDB vector find → ranked results (score 0–1)
 ```
 
 ---
@@ -73,7 +104,7 @@ User Premise (text)
 ```bash
 cd backend
 cp .env.example .env
-# Fill in OPENAI_API_KEY and HF_API_KEY in .env
+# Fill in the keys (see Environment Variables below)
 npm install
 npm run dev
 ```
@@ -92,34 +123,99 @@ Open [http://localhost:5173](http://localhost:5173).
 
 ## Environment Variables
 
-| Variable           | Required | Description                                      |
-|--------------------|----------|--------------------------------------------------|
-| `OPENAI_API_KEY`   | Optional | GPT-4o-mini for scene + shot list (mocked if absent) |
-| `HF_API_KEY`       | Optional | Hugging Face Inference API key                  |
-| `HF_IMAGE_MODEL`   | Optional | Default: `stabilityai/stable-diffusion-xl-base-1.0` |
-| `HF_AUDIO_MODEL`   | Optional | Default: `facebook/musicgen-small`              |
-| `PORT`             | Optional | Backend port (default: 3001)                    |
-| `FRONTEND_ORIGIN`  | Optional | CORS allowed origin (default: *)                |
+### Story Generator
 
-> **No API keys?** The backend gracefully falls back to deterministic mock data for both
-> scene breakdown and shot lists. Multimodal assets will report `success: false` with an
-> error message — the dashboard displays a placeholder instead of crashing.
+| Variable | Required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | Optional | Gemini for scene breakdown, shot list, image, audio. Mocked if absent. |
+| `GEMINI_MODEL` | Optional | Default: `gemini-2.0-flash` |
+| `GEMINI_IMAGE_MODEL` | Optional | Default: `gemini-3.1-flash-image` |
+| `GEMINI_AUDIO_MODEL` | Optional | Default: `lyria-3-clip-preview` |
+| `PORT` | Optional | Backend port (default: `3001`) |
+| `FRONTEND_ORIGIN` | Optional | CORS allowed origin (default: `*`) |
+| `EXTERNAL_API_TIMEOUT` | Optional | Timeout ms for Gemini calls (default: `30000`) |
+
+### Media RAG
+
+| Variable | Required | Description |
+|---|---|---|
+| `ASTRA_DB_APPLICATION_TOKEN` | **Yes** | DataStax Astra token — from Astra console → Connect |
+| `ASTRA_DB_API_ENDPOINT` | **Yes** | `https://<db-id>-<region>.apps.astra.datastax.com` |
+| `ASTRA_DB_COLLECTION` | Optional | Collection name (default: `media_assets`, auto-created) |
+| `GEMINI_API_KEY` | Optional | Reused for `text-embedding-004`, Vision captioning, audio description |
+
+> **No API keys?** Story generation and RAG ingest fall back to mock data / filename-only descriptions.
+> YouTube ingest works without any key (uses the free oEmbed API).
 
 ---
 
 ## API Reference
 
-### `POST /api/generate-story`
-**Body:** `{ "premise": "string (20–4000 chars)" }`  
-**Returns:** `StoryOutput` JSON with scenes, shots, storyboard images, and audio.
+### Story
 
-### `POST /api/export/pdf`
-**Body:** `{ "storyData": StoryOutput }`  
-**Returns:** PDF binary download.
+| Method | Endpoint | Body | Returns |
+|---|---|---|---|
+| POST | `/api/generate-story` | `{ premise: string }` | `StoryOutput` JSON |
+| POST | `/api/export/pdf` | `{ storyData }` | PDF binary |
+| POST | `/api/export/markdown` | `{ storyData }` | Markdown text |
+| GET | `/health` | — | `{ status: "ok" }` |
 
-### `POST /api/export/markdown`
-**Body:** `{ "storyData": StoryOutput }`  
-**Returns:** Markdown text download.
+### Media RAG
 
-### `GET /health`
-Returns `{ "status": "ok" }`.
+| Method | Endpoint | Body | Description |
+|---|---|---|---|
+| POST | `/api/rag/ingest-url` | `{ url, label?, description?, mediaType?, metadata? }` | Index from public URL — auto-detects type |
+| POST | `/api/rag/ingest` | `{ mediaType, label, description, url?, metadata? }` | Index with manual descriptor |
+| POST | `/api/rag/ingest-batch` | `{ assets: [...] }` | Bulk index (max 100); URL-only items auto-resolve |
+| POST | `/api/rag/search` | `{ query, topK?, mediaType? }` | Semantic search, ranked by cosine similarity |
+
+#### `/api/rag/ingest-url` — example bodies
+
+```jsonc
+// YouTube
+{ "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }
+
+// Image (auto-captioned by Gemini Vision)
+{ "url": "https://cdn.example.com/hero.jpg", "label": "Hero portrait" }
+
+// Audio (auto-described by Gemini)
+{ "url": "https://cdn.example.com/battle.mp3", "metadata": { "album": "Game OST" } }
+```
+
+#### `/api/rag/search` — example response
+
+```json
+{
+  "ok": true,
+  "data": {
+    "query": "dramatic night scene with tension",
+    "mediaTypeFilter": "video",
+    "topK": 5,
+    "totalFound": 2,
+    "results": [
+      {
+        "rank": 1,
+        "mediaType": "video",
+        "label": "chase_scene.mp4",
+        "description": "High-speed car chase, night, rain",
+        "similarityScore": 0.934812,
+        "similarityPct": "93.48%"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 + Vite + Tailwind CSS |
+| Backend | Node.js 18+ / Express 4 |
+| LLM / Generation | Google Gemini 2.0 Flash, Gemini Image, Lyria 3 |
+| Embedding | Gemini `text-embedding-004` (768-dim) |
+| Vector Database | DataStax AstraDB (cosine similarity) |
+| YouTube metadata | ytdl-core + YouTube oEmbed API |
+| Export | PDFKit (PDF), plain Markdown |
