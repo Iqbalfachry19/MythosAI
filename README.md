@@ -123,4 +123,3 @@ Open [http://localhost:5173](http://localhost:5173).
 
 ### `GET /health`
 Returns `{ "status": "ok" }`.
-# MythosAI
