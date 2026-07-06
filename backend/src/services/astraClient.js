@@ -19,14 +19,36 @@ const ASTRA_TOKEN    = process.env.ASTRA_DB_APPLICATION_TOKEN;
 const ASTRA_ENDPOINT = process.env.ASTRA_DB_API_ENDPOINT;
 const COLLECTION     = process.env.ASTRA_DB_COLLECTION || "media_assets";
 
-// Dimension matches Google text-embedding-004 output (768)
+// Dimension matches Google gemini-embedding-001 output (pinned via outputDimensionality)
 const VECTOR_DIM = 768;
 
+const VECTOR_OPTIONS = {
+  vector: {
+    dimension: VECTOR_DIM,
+    metric: "cosine",
+  },
+};
+
+let _db         = null;
 let _collection = null;
 
+function getDb() {
+  if (!_db) {
+    const client = new DataAPIClient(ASTRA_TOKEN);
+    _db = client.db(ASTRA_ENDPOINT);
+  }
+  return _db;
+}
+
 /**
- * Returns (and lazily creates) the AstraDB collection.
- * The collection uses cosine similarity for vector search.
+ * Returns (and lazily initialises) the AstraDB collection handle.
+ *
+ * Strategy:
+ *  1. Return the cached handle immediately after first successful init.
+ *  2. On cold start, call createCollection — it is a no-op when the
+ *     collection already exists with identical vector options.
+ *  3. If createCollection fails because the collection exists with
+ *     DIFFERENT options (e.g. no vector index), drop it and recreate.
  *
  * @returns {Promise<import("@datastax/astra-db-ts").Collection>}
  */
@@ -46,18 +68,36 @@ export async function getCollection() {
     );
   }
 
-  const client = new DataAPIClient(ASTRA_TOKEN);
-  const db = client.db(ASTRA_ENDPOINT);
+  const db = getDb();
 
-  // createCollection is idempotent — safe to call on every startup
-  _collection = await db.createCollection(COLLECTION, {
-    vector: {
-      dimension: VECTOR_DIM,
-      metric: "cosine",
-    },
-  });
+  try {
+    // createCollection is idempotent when options match — fast path for a
+    // collection that already exists with the correct vector config.
+    _collection = await db.createCollection(COLLECTION, VECTOR_OPTIONS);
+    console.log(`[astraClient] Ready: collection "${COLLECTION}" (dim=${VECTOR_DIM})`);
+  } catch (err) {
+    const msg = err?.message ?? "";
 
-  console.log(`[astraClient] Connected to collection "${COLLECTION}" (dim=${VECTOR_DIM})`);
+    // The collection exists but was created without a vector index
+    // (e.g. created manually or before vector config was added).
+    // Drop it and recreate with the correct schema.
+    if (
+      msg.includes("already exists") ||
+      msg.includes("EXISTING_COLLECTION_DIFFERENT_OPTIONS") ||
+      err?.errorCode === "EXISTING_COLLECTION_DIFFERENT_OPTIONS"
+    ) {
+      console.warn(
+        `[astraClient] Collection "${COLLECTION}" exists with incompatible options — dropping and recreating…`
+      );
+      await db.dropCollection(COLLECTION);
+      _collection = await db.createCollection(COLLECTION, VECTOR_OPTIONS);
+      console.log(`[astraClient] Recreated collection "${COLLECTION}" (dim=${VECTOR_DIM})`);
+    } else {
+      _collection = null; // allow retry on next request
+      throw err;
+    }
+  }
+
   return _collection;
 }
 
