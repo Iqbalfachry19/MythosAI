@@ -2,6 +2,7 @@ import { useState } from "react";
 import PremiseForm from "./components/PremiseForm.jsx";
 import StoryDashboard from "./components/StoryDashboard.jsx";
 import MediaRagPage from "./components/MediaRagPage.jsx";
+import WritingWorkspace from "./components/WritingWorkspace.jsx";
 import { generateStory } from "./api/mythosApi.js";
 
 // ── Nav tab component ─────────────────────────────────────────────────────────
@@ -25,7 +26,7 @@ function NavTab({ active, onClick, icon, label }) {
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [page, setPage] = useState("story"); // "story" | "rag"
+  const [page, setPage] = useState("story"); // "story" | "rag" | "workspace"
 
   // Story page state
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
@@ -55,7 +56,6 @@ export default function App() {
 
   function switchPage(p) {
     setPage(p);
-    // Reset story state when navigating away so re-entry shows the form
     if (p !== "story") handleReset();
   }
 
@@ -85,6 +85,12 @@ export default function App() {
             onClick={() => switchPage("rag")}
             icon="🔍"
             label="Media RAG"
+          />
+          <NavTab
+            active={page === "workspace"}
+            onClick={() => switchPage("workspace")}
+            icon="✍"
+            label="Writing Workspace"
           />
         </nav>
 
@@ -120,6 +126,9 @@ export default function App() {
 
         {/* ── Media RAG page ── */}
         {page === "rag" && <MediaRagPage />}
+
+        {/* ── Writing Workspace page ── */}
+        {page === "workspace" && <WritingWorkspace />}
       </main>
 
       {/* ── Footer ─────────────────────────────────────────────────────── */}
