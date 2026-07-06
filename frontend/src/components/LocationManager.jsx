@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage.js";
 import { v4 as uuidv4 } from "uuid";
+import ConfirmDialog from "./ConfirmDialog.jsx";
+import ImageUploadField from "./ImageUploadField.jsx";
 
 const LOCATION_TYPES = ["City / Town", "Building / Structure", "Wilderness", "Underground", "Celestial / Plane", "Sea / Water", "Other"];
 
@@ -36,11 +38,15 @@ function LocationForm({ initial, onSave, onCancel }) {
     <div>
       <label className="text-xs text-slate-400 block mb-1">{label}</label>
       {multiline ? (
-        <textarea className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 resize-none h-20 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          placeholder={placeholder} value={form[field]} onChange={(e) => set(field, e.target.value)} />
+        <textarea
+          className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 resize-none h-20 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          placeholder={placeholder} value={form[field]} onChange={(e) => set(field, e.target.value)}
+        />
       ) : (
-        <input className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          placeholder={placeholder} value={form[field]} onChange={(e) => set(field, e.target.value)} />
+        <input
+          className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          placeholder={placeholder} value={form[field]} onChange={(e) => set(field, e.target.value)}
+        />
       )}
     </div>
   );
@@ -51,8 +57,10 @@ function LocationForm({ initial, onSave, onCancel }) {
         <Field label="Location Name *" field="name" placeholder="The Obsidian Tower" />
         <div>
           <label className="text-xs text-slate-400 block mb-1">Type</label>
-          <select className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={form.type} onChange={(e) => set("type", e.target.value)}>
+          <select
+            className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            value={form.type} onChange={(e) => set("type", e.target.value)}
+          >
             {LOCATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
@@ -65,7 +73,11 @@ function LocationForm({ initial, onSave, onCancel }) {
       <Field label="Description" field="description" placeholder="Visual overview of the location…" multiline />
       <Field label="Key Details" field="keyDetails" placeholder="Notable rooms, hazards, secrets…" multiline />
       <Field label="Sensory Details" field="sensoryDetails" placeholder="Sounds, smells, textures to evoke in writing…" multiline />
-      <Field label="Reference Image URL" field="refImageUrl" placeholder="https://…" />
+      <ImageUploadField
+        label="Reference Image"
+        value={form.refImageUrl}
+        onChange={(v) => set("refImageUrl", v)}
+      />
       <div className="flex gap-3">
         <button type="submit" className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors">Save</button>
         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-white/10 text-slate-400 hover:text-white text-sm transition-colors">Cancel</button>
@@ -76,54 +88,97 @@ function LocationForm({ initial, onSave, onCancel }) {
 
 function LocationCard({ loc, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setOpen((v) => !v)}>
-        {loc.refImageUrl ? (
-          <img src={loc.refImageUrl} alt={loc.name}
-            className="w-12 h-12 rounded-lg object-cover border border-white/10 shrink-0"
-            onError={(e) => { e.target.style.display = "none"; }} />
-        ) : (
-          <div className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
-            {TYPE_ICON[loc.type] ?? "📍"}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-white truncate">{loc.name}</div>
-          <div className="text-xs text-slate-500">
-            {loc.type}{loc.region ? ` · ${loc.region}` : ""}{loc.climate ? ` · ${loc.climate}` : ""}
-          </div>
-          {loc.atmosphere && <div className="text-xs text-slate-600 italic mt-0.5 truncate">"{loc.atmosphere}"</div>}
-        </div>
-        <span className="text-slate-500 text-xs ml-2">{open ? "▲" : "▼"}</span>
-      </div>
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-      {open && (
-        <div className="border-t border-white/10 px-4 pb-4 pt-3 text-xs text-slate-300 space-y-2">
-          {loc.description && <p className="leading-relaxed">{loc.description}</p>}
-          {loc.keyDetails && (
-            <div><span className="text-slate-500 font-medium">Key Details: </span>{loc.keyDetails}</div>
-          )}
-          {loc.sensoryDetails && (
-            <div><span className="text-slate-500 font-medium">Sensory: </span><em>{loc.sensoryDetails}</em></div>
-          )}
-          {loc.inhabitants && (
-            <div><span className="text-slate-500 font-medium">Inhabitants: </span>{loc.inhabitants}</div>
-          )}
-          {loc.tags && (
-            <div className="flex gap-1 flex-wrap pt-1">
-              {loc.tags.split(",").map((t) => (
-                <span key={t} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10">{t.trim()}</span>
-              ))}
+  return (
+    <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete location?"
+        message={`"${loc.name}" will be permanently removed.`}
+        onConfirm={() => { setConfirmOpen(false); onDelete(loc.id); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
+      <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
+        {/* ── Header row ── */}
+        <div
+          className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {loc.refImageUrl ? (
+            <img
+              src={loc.refImageUrl}
+              alt={loc.name}
+              className="w-12 h-12 rounded-lg object-cover border border-white/10 shrink-0"
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
+              {TYPE_ICON[loc.type] ?? "📍"}
             </div>
           )}
-          <div className="flex gap-2 pt-1">
-            <button onClick={() => onEdit(loc)} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">✏ Edit</button>
-            <button onClick={() => onDelete(loc.id)} className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">🗑 Delete</button>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-white truncate">{loc.name}</div>
+            <div className="text-xs text-slate-500">
+              {loc.type}{loc.region ? ` · ${loc.region}` : ""}{loc.climate ? ` · ${loc.climate}` : ""}
+            </div>
+            {loc.atmosphere && <div className="text-xs text-slate-600 italic mt-0.5 truncate">"{loc.atmosphere}"</div>}
           </div>
+          <span className="text-slate-500 text-xs ml-2">{open ? "▲" : "▼"}</span>
         </div>
-      )}
-    </div>
+
+        {/* ── Expanded detail ── */}
+        {open && (
+          <div className="border-t border-white/10 px-4 pb-4 pt-3 text-xs text-slate-300 space-y-2">
+            {/* Reference image full size */}
+            {loc.refImageUrl && (
+              <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                <img
+                  src={loc.refImageUrl}
+                  alt={loc.name}
+                  className="w-full object-cover"
+                  style={{ maxHeight: "220px" }}
+                  onError={(e) => { e.target.parentElement.style.display = "none"; }}
+                />
+              </div>
+            )}
+            {loc.description && <p className="leading-relaxed">{loc.description}</p>}
+            {loc.keyDetails && (
+              <div><span className="text-slate-500 font-medium">Key Details: </span>{loc.keyDetails}</div>
+            )}
+            {loc.sensoryDetails && (
+              <div><span className="text-slate-500 font-medium">Sensory: </span><em>{loc.sensoryDetails}</em></div>
+            )}
+            {loc.inhabitants && (
+              <div><span className="text-slate-500 font-medium">Inhabitants: </span>{loc.inhabitants}</div>
+            )}
+            {loc.tags && (
+              <div className="flex gap-1 flex-wrap pt-1">
+                {loc.tags.split(",").map((t) => (
+                  <span key={t} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10">{t.trim()}</span>
+                ))}
+              </div>
+            )}
+            {/* Action buttons — always visible */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => onEdit(loc)}
+                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors"
+              >
+                ✏ Edit
+              </button>
+              <button
+                onClick={() => setConfirmOpen(true)}
+                className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors"
+              >
+                🗑 Delete
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -198,9 +253,12 @@ export default function LocationManager() {
 
       <div className="space-y-3">
         {filtered.map((loc) => (
-          <LocationCard key={loc.id} loc={loc}
+          <LocationCard
+            key={loc.id}
+            loc={loc}
             onEdit={(l) => { setEditing(l); setView("edit"); }}
-            onDelete={(id) => setLocations((l) => l.filter((loc) => loc.id !== id))} />
+            onDelete={(id) => setLocations((l) => l.filter((loc) => loc.id !== id))}
+          />
         ))}
       </div>
     </div>

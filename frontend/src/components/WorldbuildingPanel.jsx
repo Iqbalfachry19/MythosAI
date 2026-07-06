@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage.js";
 import { v4 as uuidv4 } from "uuid";
+import ConfirmDialog from "./ConfirmDialog.jsx";
+import ImageUploadField from "./ImageUploadField.jsx";
 
 const CATEGORIES = ["Lore & History", "Factions & Politics", "Magic & Rules", "Geography", "Religion & Mythology", "Technology", "Flora & Fauna", "Other"];
 
@@ -14,6 +16,7 @@ const EMPTY_ENTRY = {
   inWorldDate: "",
   tags: "",
   isKeyEvent: false,
+  refImageUrl: "",
 };
 
 function EntryForm({ initial, onSave, onCancel }) {
@@ -28,50 +31,74 @@ function EntryForm({ initial, onSave, onCancel }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="text-xs text-slate-400 block mb-1">Title *</label>
-          <input className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="The First Sundering" />
+          <input
+            className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="The First Sundering"
+          />
         </div>
         <div>
           <label className="text-xs text-slate-400 block mb-1">Category</label>
-          <select className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={form.category} onChange={(e) => set("category", e.target.value)}>
+          <select
+            className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            value={form.category} onChange={(e) => set("category", e.target.value)}
+          >
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
           <label className="text-xs text-slate-400 block mb-1">Related Characters</label>
-          <input className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={form.relatedCharacters} onChange={(e) => set("relatedCharacters", e.target.value)} placeholder="Elara, The Elder…" />
+          <input
+            className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            value={form.relatedCharacters} onChange={(e) => set("relatedCharacters", e.target.value)} placeholder="Elara, The Elder…"
+          />
         </div>
         <div>
           <label className="text-xs text-slate-400 block mb-1">Related Locations</label>
-          <input className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={form.relatedLocations} onChange={(e) => set("relatedLocations", e.target.value)} placeholder="The Obsidian Plains…" />
+          <input
+            className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            value={form.relatedLocations} onChange={(e) => set("relatedLocations", e.target.value)} placeholder="The Obsidian Plains…"
+          />
         </div>
         <div>
           <label className="text-xs text-slate-400 block mb-1">In-world Date</label>
-          <input className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={form.inWorldDate} onChange={(e) => set("inWorldDate", e.target.value)} placeholder="Age of Embers, Year 0" />
+          <input
+            className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            value={form.inWorldDate} onChange={(e) => set("inWorldDate", e.target.value)} placeholder="Age of Embers, Year 0"
+          />
         </div>
         <div>
           <label className="text-xs text-slate-400 block mb-1">Tags</label>
-          <input className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={form.tags} onChange={(e) => set("tags", e.target.value)} placeholder="war, magic, pivotal" />
+          <input
+            className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            value={form.tags} onChange={(e) => set("tags", e.target.value)} placeholder="war, magic, pivotal"
+          />
         </div>
       </div>
       <div>
         <label className="text-xs text-slate-400 block mb-1">Summary</label>
-        <textarea className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 resize-none h-16 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          value={form.summary} onChange={(e) => set("summary", e.target.value)} placeholder="Short overview…" />
+        <textarea
+          className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 resize-none h-16 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          value={form.summary} onChange={(e) => set("summary", e.target.value)} placeholder="Short overview…"
+        />
       </div>
       <div>
         <label className="text-xs text-slate-400 block mb-1">Full Details</label>
-        <textarea className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 resize-none h-28 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          value={form.details} onChange={(e) => set("details", e.target.value)} placeholder="Deep lore, rules, history…" />
+        <textarea
+          className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 resize-none h-28 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          value={form.details} onChange={(e) => set("details", e.target.value)} placeholder="Deep lore, rules, history…"
+        />
       </div>
+      <ImageUploadField
+        label="Reference Image"
+        value={form.refImageUrl}
+        onChange={(v) => set("refImageUrl", v)}
+      />
       <div className="flex items-center gap-2">
-        <input type="checkbox" id="isKey" checked={form.isKeyEvent} onChange={(e) => set("isKeyEvent", e.target.checked)}
-          className="rounded border-white/20 bg-white/5 accent-brand-500" />
+        <input
+          type="checkbox" id="isKey" checked={form.isKeyEvent}
+          onChange={(e) => set("isKeyEvent", e.target.checked)}
+          className="rounded border-white/20 bg-white/5 accent-brand-500"
+        />
         <label htmlFor="isKey" className="text-xs text-slate-400">Mark as Key Scene / Milestone</label>
       </div>
       <div className="flex gap-3">
@@ -95,48 +122,95 @@ const CATEGORY_ICON = {
 
 function EntryCard({ entry, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   return (
-    <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
-      <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="text-lg shrink-0">{CATEGORY_ICON[entry.category] ?? "💡"}</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-white">{entry.title}</span>
-            {entry.isKeyEvent && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-900/50 text-yellow-300 border border-yellow-700/30">★ Key Event</span>
-            )}
+    <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete world entry?"
+        message={`"${entry.title}" will be permanently removed.`}
+        onConfirm={() => { setConfirmOpen(false); onDelete(entry.id); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
+      <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
+        {/* ── Header row ── */}
+        <div
+          className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {entry.refImageUrl ? (
+            <img
+              src={entry.refImageUrl}
+              alt={entry.title}
+              className="w-10 h-10 rounded-lg object-cover border border-white/10 shrink-0"
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+          ) : (
+            <span className="text-lg shrink-0">{CATEGORY_ICON[entry.category] ?? "💡"}</span>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-white">{entry.title}</span>
+              {entry.isKeyEvent && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-900/50 text-yellow-300 border border-yellow-700/30">★ Key Event</span>
+              )}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              {entry.category}{entry.inWorldDate ? ` · ${entry.inWorldDate}` : ""}
+              {entry.summary && ` · ${entry.summary.slice(0, 60)}${entry.summary.length > 60 ? "…" : ""}`}
+            </div>
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">
-            {entry.category}{entry.inWorldDate ? ` · ${entry.inWorldDate}` : ""}
-            {entry.summary && ` · ${entry.summary.slice(0, 60)}${entry.summary.length > 60 ? "…" : ""}`}
-          </div>
+          <span className="text-slate-500 text-xs">{open ? "▲" : "▼"}</span>
         </div>
-        <span className="text-slate-500 text-xs">{open ? "▲" : "▼"}</span>
+
+        {/* ── Expanded detail ── */}
+        {open && (
+          <div className="border-t border-white/10 px-4 pb-4 pt-3 text-xs text-slate-300 space-y-2">
+            {/* Reference image full size */}
+            {entry.refImageUrl && (
+              <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                <img
+                  src={entry.refImageUrl}
+                  alt={entry.title}
+                  className="w-full object-cover"
+                  style={{ maxHeight: "220px" }}
+                  onError={(e) => { e.target.parentElement.style.display = "none"; }}
+                />
+              </div>
+            )}
+            {entry.details && <p className="leading-relaxed">{entry.details}</p>}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-500">
+              {entry.relatedCharacters && <span>👤 {entry.relatedCharacters}</span>}
+              {entry.relatedLocations && <span>📍 {entry.relatedLocations}</span>}
+              {entry.tags && (
+                <span className="flex gap-1">
+                  {entry.tags.split(",").map((t) => (
+                    <span key={t} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10">{t.trim()}</span>
+                  ))}
+                </span>
+              )}
+            </div>
+            {/* Action buttons — always visible */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => onEdit(entry)}
+                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors"
+              >
+                ✏ Edit
+              </button>
+              <button
+                onClick={() => setConfirmOpen(true)}
+                className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors"
+              >
+                🗑 Delete
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      {open && (
-        <div className="border-t border-white/10 px-4 pb-4 pt-3 text-xs text-slate-300 space-y-2">
-          {entry.details && <p className="leading-relaxed">{entry.details}</p>}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-500">
-            {entry.relatedCharacters && <span>👤 {entry.relatedCharacters}</span>}
-            {entry.relatedLocations && <span>📍 {entry.relatedLocations}</span>}
-            {entry.tags && (
-              <span className="flex gap-1">
-                {entry.tags.split(",").map((t) => (
-                  <span key={t} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10">{t.trim()}</span>
-                ))}
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button onClick={() => onEdit(entry)} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">✏ Edit</button>
-            <button onClick={() => onDelete(entry.id)} className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">🗑 Delete</button>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -229,9 +303,12 @@ export default function WorldbuildingPanel() {
 
       <div className="space-y-3">
         {filtered.map((entry) => (
-          <EntryCard key={entry.id} entry={entry}
+          <EntryCard
+            key={entry.id}
+            entry={entry}
             onEdit={(e) => { setEditing(e); setView("edit"); }}
-            onDelete={(id) => setEntries((en) => en.filter((e) => e.id !== id))} />
+            onDelete={(id) => setEntries((en) => en.filter((e) => e.id !== id))}
+          />
         ))}
       </div>
     </div>

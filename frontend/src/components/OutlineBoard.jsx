@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage.js";
 import { v4 as uuidv4 } from "uuid";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 
 const STATUSES = ["Idea", "Braindump", "Draft", "Editing", "Finished"];
 const STATUS_COLORS = {
@@ -32,36 +33,69 @@ function StatusBadge({ status }) {
   );
 }
 
-function ChapterRow({ chapter, onEdit, onDelete, onStatusChange }) {
+function ActDeleteButton({ actId, actTitle, onDelete }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   return (
-    <div className="flex items-start gap-3 px-4 py-3 border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors group">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-white font-medium">{chapter.title || <em className="text-slate-500">Untitled Chapter</em>}</span>
-          <StatusBadge status={chapter.status} />
+    <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete act?"
+        message={`"${actTitle}" and all its chapters will be permanently removed.`}
+        onConfirm={() => { setConfirmOpen(false); onDelete(actId); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+      <button
+        onClick={() => setConfirmOpen(true)}
+        className="text-xs text-red-500 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/30 transition-colors"
+      >
+        ✕
+      </button>
+    </>
+  );
+}
+
+function ChapterRow({ chapter, onEdit, onDelete, onStatusChange }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  return (
+    <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete chapter?"
+        message={`"${chapter.title || "Untitled Chapter"}" will be permanently removed.`}
+        onConfirm={() => { setConfirmOpen(false); onDelete(chapter.id); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+      <div className="flex items-start gap-3 px-4 py-3 border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-white font-medium">{chapter.title || <em className="text-slate-500">Untitled Chapter</em>}</span>
+            <StatusBadge status={chapter.status} />
+          </div>
+          {chapter.synopsis && (
+            <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{chapter.synopsis}</p>
+          )}
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[10px] text-slate-600">
+            {chapter.characters && <span>👤 {chapter.characters}</span>}
+            {chapter.location && <span>📍 {chapter.location}</span>}
+            {chapter.timelineDate && <span>🗓 {chapter.timelineDate}</span>}
+            {chapter.wordcountTarget && <span>📝 {chapter.wordcountTarget} words</span>}
+          </div>
         </div>
-        {chapter.synopsis && (
-          <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{chapter.synopsis}</p>
-        )}
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[10px] text-slate-600">
-          {chapter.characters && <span>👤 {chapter.characters}</span>}
-          {chapter.location && <span>📍 {chapter.location}</span>}
-          {chapter.timelineDate && <span>🗓 {chapter.timelineDate}</span>}
-          {chapter.wordcountTarget && <span>📝 {chapter.wordcountTarget} words</span>}
+        {/* Actions — always visible */}
+        <div className="flex gap-1 shrink-0">
+          <select
+            value={chapter.status}
+            onChange={(e) => onStatusChange(chapter.id, e.target.value)}
+            className="text-[10px] rounded bg-white/10 border border-white/10 text-slate-300 px-1 py-0.5 focus:outline-none"
+          >
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <button onClick={() => onEdit(chapter)} className="text-xs text-slate-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors">✏</button>
+          <button onClick={() => setConfirmOpen(true)} className="text-xs text-red-500 hover:text-red-300 px-1.5 py-0.5 rounded hover:bg-red-900/30 transition-colors">✕</button>
         </div>
       </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <select
-          value={chapter.status}
-          onChange={(e) => onStatusChange(chapter.id, e.target.value)}
-          className="text-[10px] rounded bg-white/10 border border-white/10 text-slate-300 px-1 py-0.5 focus:outline-none"
-        >
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <button onClick={() => onEdit(chapter)} className="text-xs text-slate-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors">✏</button>
-        <button onClick={() => onDelete(chapter.id)} className="text-xs text-red-500 hover:text-red-300 px-1.5 py-0.5 rounded hover:bg-red-900/30 transition-colors">✕</button>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -272,12 +306,7 @@ export default function OutlineBoard() {
                 >
                   + Chapter
                 </button>
-                <button
-                  onClick={() => deleteAct(act.id)}
-                  className="text-xs text-red-500 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/30 transition-colors"
-                >
-                  ✕
-                </button>
+                <ActDeleteButton actId={act.id} actTitle={act.title} onDelete={deleteAct} />
               </div>
 
               {/* Chapters */}

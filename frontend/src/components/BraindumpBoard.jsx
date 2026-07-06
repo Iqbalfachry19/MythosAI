@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage.js";
 import { v4 as uuidv4 } from "uuid";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 
 const IDEA_TYPES = ["Premise", "Plot Twist", "Character Idea", "Scene", "Dialogue", "Theme", "Research", "Other"];
 const IDEA_ICONS = {
@@ -18,41 +19,52 @@ const PRIORITY_COLORS = {
 
 function IdeaCard({ idea, onPin, onDelete, onPromote }) {
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   return (
-    <div className={`rounded-xl border overflow-hidden transition-colors ${idea.pinned ? "border-yellow-700/40 bg-yellow-900/10" : "border-white/10 bg-white/3"}`}>
-      <div className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setOpen((v) => !v)}>
-        <span className="text-xl mt-0.5 shrink-0">{IDEA_ICONS[idea.type] ?? "📌"}</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-white">{idea.title || <em className="text-slate-500">Untitled idea</em>}</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${PRIORITY_COLORS[idea.priority]}`}>{idea.priority}</span>
-            {idea.pinned && <span className="text-[10px] text-yellow-400">📌 Pinned</span>}
+    <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete idea?"
+        message={`"${idea.title || "Untitled idea"}" will be permanently removed.`}
+        onConfirm={() => { setConfirmOpen(false); onDelete(idea.id); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+      <div className={`rounded-xl border overflow-hidden transition-colors ${idea.pinned ? "border-yellow-700/40 bg-yellow-900/10" : "border-white/10 bg-white/3"}`}>
+        <div className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setOpen((v) => !v)}>
+          <span className="text-xl mt-0.5 shrink-0">{IDEA_ICONS[idea.type] ?? "📌"}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-white">{idea.title || <em className="text-slate-500">Untitled idea</em>}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${PRIORITY_COLORS[idea.priority]}`}>{idea.priority}</span>
+              {idea.pinned && <span className="text-[10px] text-yellow-400">📌 Pinned</span>}
+            </div>
+            {idea.content && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{idea.content}</p>}
+            <div className="text-[10px] text-slate-600 mt-0.5">
+              {idea.type} · {new Date(idea.createdAt).toLocaleDateString()}
+            </div>
           </div>
-          {idea.content && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{idea.content}</p>}
-          <div className="text-[10px] text-slate-600 mt-0.5">
-            {idea.type} · {new Date(idea.createdAt).toLocaleDateString()}
-          </div>
+          <span className="text-slate-500 text-xs ml-1">{open ? "▲" : "▼"}</span>
         </div>
-        <span className="text-slate-500 text-xs ml-1">{open ? "▲" : "▼"}</span>
+        {open && (
+          <div className="border-t border-white/10 px-4 pb-4 pt-3 text-xs text-slate-300 space-y-2">
+            {idea.content && <p className="leading-relaxed whitespace-pre-wrap">{idea.content}</p>}
+            {idea.relatedChapter && <div className="text-slate-500">📖 Related: {idea.relatedChapter}</div>}
+            <div className="flex gap-2 pt-1 flex-wrap">
+              <button onClick={() => onPin(idea.id)} className="px-3 py-1.5 rounded-lg bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-400 transition-colors">
+                {idea.pinned ? "Unpin" : "📌 Pin"}
+              </button>
+              <button onClick={() => onPromote(idea)} className="px-3 py-1.5 rounded-lg bg-brand-600/30 hover:bg-brand-600/50 text-brand-400 transition-colors">
+                → Promote to Outline
+              </button>
+              <button onClick={() => setConfirmOpen(true)} className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">
+                🗑 Delete
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      {open && (
-        <div className="border-t border-white/10 px-4 pb-4 pt-3 text-xs text-slate-300 space-y-2">
-          {idea.content && <p className="leading-relaxed whitespace-pre-wrap">{idea.content}</p>}
-          {idea.relatedChapter && <div className="text-slate-500">📖 Related: {idea.relatedChapter}</div>}
-          <div className="flex gap-2 pt-1 flex-wrap">
-            <button onClick={() => onPin(idea.id)} className="px-3 py-1.5 rounded-lg bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-400 transition-colors">
-              {idea.pinned ? "Unpin" : "📌 Pin"}
-            </button>
-            <button onClick={() => onPromote(idea)} className="px-3 py-1.5 rounded-lg bg-brand-600/30 hover:bg-brand-600/50 text-brand-400 transition-colors">
-              → Promote to Outline
-            </button>
-            <button onClick={() => onDelete(idea.id)} className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">
-              🗑 Delete
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -61,8 +73,17 @@ function IdeaCard({ idea, onPin, onDelete, onPromote }) {
 function GoalCard({ goal, onUpdate, onDelete }) {
   const pct = goal.target > 0 ? Math.min(100, Math.round((goal.current / goal.target) * 100)) : 0;
   const done = pct >= 100;
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
+    <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete goal?"
+        message={`"${goal.title}" will be permanently removed.`}
+        onConfirm={() => { setConfirmOpen(false); onDelete(goal.id); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     <div className={`rounded-xl border px-4 py-3 space-y-2 ${done ? "border-emerald-700/40 bg-emerald-900/10" : "border-white/10 bg-white/3"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
@@ -72,7 +93,7 @@ function GoalCard({ goal, onUpdate, onDelete }) {
           </div>
           {goal.deadline && <div className="text-xs text-slate-500 mt-0.5">Due: {goal.deadline}</div>}
         </div>
-        <button onClick={() => onDelete(goal.id)} className="text-xs text-red-500 hover:text-red-300 px-1.5 py-0.5 rounded hover:bg-red-900/30 transition-colors shrink-0">✕</button>
+        <button onClick={() => setConfirmOpen(true)} className="text-xs text-red-500 hover:text-red-300 px-1.5 py-0.5 rounded hover:bg-red-900/30 transition-colors shrink-0">✕</button>
       </div>
       {/* Progress bar */}
       <div className="space-y-1">
@@ -99,6 +120,7 @@ function GoalCard({ goal, onUpdate, onDelete }) {
         <span className="text-xs text-slate-500">{goal.unit} written</span>
       </div>
     </div>
+    </>
   );
 }
 

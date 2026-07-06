@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage.js";
 import { v4 as uuidv4 } from "uuid";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 
 const REF_TYPES = ["Book", "Article", "Website", "Video", "Podcast", "Interview", "Dataset", "Document", "Other"];
 const REF_ICONS = {
@@ -68,7 +69,17 @@ function CitationForm({ initial, onSave, onCancel }) {
 
 function CitationCard({ ref: r, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   return (
+    <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete reference?"
+        message={`"${r.title}" will be permanently removed.`}
+        onConfirm={() => { setConfirmOpen(false); onDelete(r.id); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
       <div className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setOpen((v) => !v)}>
         <span className="text-xl mt-0.5 shrink-0">{REF_ICONS[r.type] ?? "🔗"}</span>
@@ -106,11 +117,12 @@ function CitationCard({ ref: r, onEdit, onDelete }) {
           )}
           <div className="flex gap-2 pt-1">
             <button onClick={() => onEdit(r)} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">✏ Edit</button>
-            <button onClick={() => onDelete(r.id)} className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">🗑 Delete</button>
+            <button onClick={() => setConfirmOpen(true)} className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">🗑 Delete</button>
           </div>
         </div>
       )}
     </div>
+    </>
   );
 }
 

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage.js";
 import { v4 as uuidv4 } from "uuid";
+import ConfirmDialog from "./ConfirmDialog.jsx";
+import ImageUploadField from "./ImageUploadField.jsx";
 
 const EMPTY_CHAR = {
   name: "",
@@ -69,8 +71,12 @@ function CharacterForm({ initial, onSave, onCancel }) {
       <Field label="Motivation / Goal" field="motivation" placeholder="What drives them? What do they fear?" multiline />
       <Field label="Backstory" field="backstory" placeholder="Key past events…" multiline />
       <Field label="Quirks / Habits" field="quirks" placeholder="Always hums when nervous…" />
-      <Field label="Reference Image URL" field="refImageUrl" placeholder="https://…" />
       <Field label="Tags (comma-separated)" field="tags" placeholder="hero, magic, warrior" />
+      <ImageUploadField
+        label="Reference Image"
+        value={form.refImageUrl}
+        onChange={(v) => set("refImageUrl", v)}
+      />
       <div className="flex gap-3 pt-2">
         <button
           type="submit"
@@ -92,79 +98,107 @@ function CharacterForm({ initial, onSave, onCancel }) {
   );
 }
 
-function CharacterCard({ char, onEdit, onDelete }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
-      <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors"
-        onClick={() => setOpen((v) => !v)}
-      >
-        {char.refImageUrl ? (
-          <img
-            src={char.refImageUrl}
-            alt={char.name}
-            className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"
-            onError={(e) => { e.target.style.display = "none"; }}
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-brand-600/30 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-sm shrink-0">
-            {char.name.charAt(0).toUpperCase()}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-white truncate">{char.name}</div>
-          <div className="text-xs text-slate-500 truncate">{[char.role, char.age && `Age ${char.age}`].filter(Boolean).join(" · ")}</div>
-        </div>
-        {char.tags && (
-          <div className="hidden sm:flex gap-1 flex-wrap justify-end max-w-[160px]">
-            {char.tags.split(",").slice(0, 3).map((t) => (
-              <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-brand-600/20 text-brand-400 border border-brand-500/20">
-                {t.trim()}
-              </span>
-            ))}
-          </div>
-        )}
-        <span className="text-slate-500 text-xs ml-2">{open ? "▲" : "▼"}</span>
-      </div>
-
-      {open && (
-        <div className="border-t border-white/10 px-4 pb-4 pt-3 space-y-3 text-xs text-slate-300">
-          {char.appearance && <Detail label="Appearance" value={char.appearance} />}
-          {char.hairStyle && <Detail label="Hair" value={char.hairStyle} />}
-          {char.eyeColor && <Detail label="Eyes" value={char.eyeColor} />}
-          {char.clothing && <Detail label="Clothing" value={char.clothing} />}
-          {char.personality && <Detail label="Personality" value={char.personality} />}
-          {char.motivation && <Detail label="Motivation" value={char.motivation} />}
-          {char.backstory && <Detail label="Backstory" value={char.backstory} />}
-          {char.quirks && <Detail label="Quirks" value={char.quirks} />}
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={() => onEdit(char)}
-              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors"
-            >
-              ✏ Edit
-            </button>
-            <button
-              onClick={() => onDelete(char.id)}
-              className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors"
-            >
-              🗑 Delete
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function Detail({ label, value }) {
   return (
     <div>
       <span className="text-slate-500 font-medium">{label}: </span>
       <span className="text-slate-300">{value}</span>
     </div>
+  );
+}
+
+function CharacterCard({ char, onEdit, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  return (
+    <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete character?"
+        message={`"${char.name}" will be permanently removed.`}
+        onConfirm={() => { setConfirmOpen(false); onDelete(char.id); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
+      <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
+        {/* ── Header row — always click to expand ── */}
+        <div
+          className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {char.refImageUrl ? (
+            <img
+              src={char.refImageUrl}
+              alt={char.name}
+              className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-brand-600/30 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-sm shrink-0">
+              {char.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-white truncate">{char.name}</div>
+            <div className="text-xs text-slate-500 truncate">
+              {[char.role, char.age && `Age ${char.age}`].filter(Boolean).join(" · ")}
+            </div>
+          </div>
+          {char.tags && (
+            <div className="hidden sm:flex gap-1 flex-wrap justify-end max-w-[160px]">
+              {char.tags.split(",").slice(0, 3).map((t) => (
+                <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-brand-600/20 text-brand-400 border border-brand-500/20">
+                  {t.trim()}
+                </span>
+              ))}
+            </div>
+          )}
+          <span className="text-slate-500 text-xs ml-2">{open ? "▲" : "▼"}</span>
+        </div>
+
+        {/* ── Expanded detail ── */}
+        {open && (
+          <div className="border-t border-white/10 px-4 pb-4 pt-3 space-y-3 text-xs text-slate-300">
+            {/* Reference image (full size) */}
+            {char.refImageUrl && (
+              <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                <img
+                  src={char.refImageUrl}
+                  alt={char.name}
+                  className="w-full object-cover"
+                  style={{ maxHeight: "220px" }}
+                  onError={(e) => { e.target.parentElement.style.display = "none"; }}
+                />
+              </div>
+            )}
+            {char.appearance && <Detail label="Appearance" value={char.appearance} />}
+            {char.hairStyle && <Detail label="Hair" value={char.hairStyle} />}
+            {char.eyeColor && <Detail label="Eyes" value={char.eyeColor} />}
+            {char.clothing && <Detail label="Clothing" value={char.clothing} />}
+            {char.personality && <Detail label="Personality" value={char.personality} />}
+            {char.motivation && <Detail label="Motivation" value={char.motivation} />}
+            {char.backstory && <Detail label="Backstory" value={char.backstory} />}
+            {char.quirks && <Detail label="Quirks" value={char.quirks} />}
+            {/* Action buttons — always visible, no hover required */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => onEdit(char)}
+                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors"
+              >
+                ✏ Edit
+              </button>
+              <button
+                onClick={() => setConfirmOpen(true)}
+                className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors"
+              >
+                🗑 Delete
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -194,7 +228,10 @@ export default function CharacterManager() {
   }
 
   const filtered = characters.filter((c) =>
-    search ? c.name.toLowerCase().includes(search.toLowerCase()) || (c.tags || "").toLowerCase().includes(search.toLowerCase()) : true
+    search
+      ? c.name.toLowerCase().includes(search.toLowerCase()) ||
+        (c.tags || "").toLowerCase().includes(search.toLowerCase())
+      : true
   );
 
   return (
@@ -202,7 +239,9 @@ export default function CharacterManager() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-base font-semibold text-white">Characters</h3>
-          <p className="text-xs text-slate-500 mt-0.5">{characters.length} character{characters.length !== 1 ? "s" : ""} · click to expand details</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {characters.length} character{characters.length !== 1 ? "s" : ""} · click to expand
+          </p>
         </div>
         <button
           onClick={() => { setEditing(null); setView(view === "new" ? "list" : "new"); }}
