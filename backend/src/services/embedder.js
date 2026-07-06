@@ -1,6 +1,6 @@
 /**
  * embedder.js
- * Wraps Google text-embedding-004 to produce 768-dim float vectors.
+ * Wraps Google gemini-embedding-001 to produce 768-dim float vectors.
  *
  * For video and audio assets we embed their *text description* (transcript /
  * caption / scene label) because embedding models are text-in/vector-out.
@@ -15,7 +15,10 @@ const HAS_GEMINI = GEMINI_KEY && !GEMINI_KEY.startsWith("AIza...");
 
 const ai = HAS_GEMINI ? new GoogleGenAI({ apiKey: GEMINI_KEY }) : null;
 
-const EMBEDDING_MODEL = "gemini-embedding-2"; // 768 dims, free tier friendly
+// gemini-embedding-001 default output is 3072 dims; we pin to 768 to match
+// the AstraDB collection schema (default_keyspace.media_assets, dim=768).
+const EMBEDDING_MODEL = "gemini-embedding-001";
+const VECTOR_DIM = 768;
 
 /**
  * Embeds a single text string and returns a float32 array (length 768).
@@ -35,12 +38,16 @@ export async function embedText(text) {
   const response = await ai.models.embedContent({
     model: EMBEDDING_MODEL,
     contents: text,
+    config: { outputDimensionality: VECTOR_DIM },
   });
 
   // Response shape: { embeddings: [{ values: number[] }] }
   const values = response?.embeddings?.[0]?.values;
   if (!Array.isArray(values) || values.length === 0) {
-    throw new Error("text-embedding-004 returned no embedding values.");
+    throw new Error(`${EMBEDDING_MODEL} returned no embedding values.`);
+  }
+  if (values.length !== VECTOR_DIM) {
+    throw new Error(`Expected ${VECTOR_DIM}-dim vector, got ${values.length}. Check outputDimensionality config.`);
   }
 
   return values; // 768-dim float array
