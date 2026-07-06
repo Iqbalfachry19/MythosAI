@@ -88,9 +88,22 @@ async function resolveYouTube(url) {
     console.warn(`[urlResolver] ytdl-core failed for ${url}: ${e.message} — using oEmbed only`);
   }
 
-  // 3. Build a rich semantic description for embedding
+  // 3. Gemini visual scene analysis — understand actual video content, not just metadata
+  let sceneAnalysis = "";
+  if (HAS_GEMINI) {
+    try {
+      sceneAnalysis = await geminiDescribeVideo(url, title);
+      console.log(`[urlResolver] Gemini scene analysis done for: ${title}`);
+    } catch (e) {
+      console.warn(`[urlResolver] Gemini video analysis failed for ${url}: ${e.message} — falling back to metadata only`);
+    }
+  }
+
+  // 4. Build a rich semantic description: scene analysis first (most searchable),
+  //    then metadata as supporting context
   const parts = [
     `YouTube video: "${title}" by ${channel}`,
+    sceneAnalysis || null,
     ytDescription || null,
     keywords.length ? `Tags: ${keywords.join(", ")}` : null,
     duration ? `Duration: ${duration}` : null,
@@ -249,6 +262,33 @@ async function geminiDescribeImage(base64, mimeType) {
     ],
   });
   return resp.text?.trim() ?? "Image content (no description available)";
+}
+
+async function geminiDescribeVideo(youtubeUrl, title) {
+  const resp = await ai.models.generateContent({
+    model: VISION_MODEL,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            fileData: {
+              fileUri: youtubeUrl,
+            },
+          },
+          {
+            text:
+              "Watch this video and describe its actual visual content in 4–6 sentences. " +
+              "Focus on: the scenes shown, locations, characters or people, actions, " +
+              "objects, colours, and mood. " +
+              "Do NOT repeat the video title or channel name. " +
+              "Be specific and factual so this description can be used for semantic search.",
+          },
+        ],
+      },
+    ],
+  });
+  return resp.text?.trim() ?? "";
 }
 
 async function geminiDescribeAudio(base64, mimeType) {
