@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PremiseForm from "./components/PremiseForm.jsx";
 import StoryDashboard from "./components/StoryDashboard.jsx";
 import MediaRagPage from "./components/MediaRagPage.jsx";
 import WritingWorkspace from "./components/WritingWorkspace.jsx";
+import TutorialModal from "./components/TutorialModal.jsx";
 import { generateStory } from "./api/mythosApi.js";
 
 // ── Nav tab component ─────────────────────────────────────────────────────────
@@ -27,6 +28,18 @@ function NavTab({ active, onClick, icon, label }) {
 
 export default function App() {
   const [page, setPage] = useState("story"); // "story" | "rag" | "workspace"
+
+  // Tutorial modal state
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+
+  // Auto-show tutorial on first visit
+  useEffect(() => {
+    const seen = localStorage.getItem("mythosai_tutorial_seen");
+    if (!seen) {
+      setTutorialOpen(true);
+      localStorage.setItem("mythosai_tutorial_seen", "1");
+    }
+  }, []);
 
   // Story page state
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
@@ -94,16 +107,30 @@ export default function App() {
           />
         </nav>
 
-        {/* Back button when story is loaded */}
-        {page === "story" && storyData && (
+        {/* Right side actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Back button when story is loaded */}
+          {page === "story" && storyData && (
+            <button
+              onClick={handleReset}
+              className="text-xs text-slate-400 hover:text-white transition-colors"
+            >
+              ← New Story
+            </button>
+          )}
+          {/* Tutorial button */}
           <button
-            onClick={handleReset}
-            className="text-xs text-slate-400 hover:text-white transition-colors shrink-0"
+            onClick={() => setTutorialOpen(true)}
+            title="Lihat tutorial"
+            className="w-7 h-7 flex items-center justify-center rounded-full border border-white/15 text-slate-400 hover:text-white hover:border-white/30 text-xs font-bold transition-colors"
           >
-            ← New Story
+            ?
           </button>
-        )}
+        </div>
       </header>
+
+      {/* ── Tutorial Modal ─────────────────────────────────────────────── */}
+      <TutorialModal open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
 
       {/* ── Main ───────────────────────────────────────────────────────── */}
       <main className="flex-1 px-4 py-8 max-w-5xl mx-auto w-full">
