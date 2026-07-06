@@ -9,6 +9,8 @@ MythosAI has two core features:
 
 ---
 
+Live Demo: [mythosaicreative.netlify.app](https://mythosaicreative.netlify.app/)
+
 ## Architecture
 
 ```
