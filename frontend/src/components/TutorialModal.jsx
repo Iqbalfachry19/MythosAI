@@ -6,13 +6,13 @@ const SECTIONS = [
   {
     id: "welcome",
     icon: "🎬",
-    title: "Selamat datang di MythosAI",
+    title: "Welcome to MythosAI",
     steps: [
       {
         icon: "✦",
-        title: "Apa itu MythosAI?",
+        title: "What is MythosAI?",
         description:
-          "MythosAI adalah AI Creative Partner Suite — platform multimodal untuk membuat cerita, mengelola aset media, dan membangun dunia fiksi secara lengkap.",
+          "MythosAI is an AI Creative Partner Suite — a multimodal platform for crafting stories, managing media assets, and building fictional worlds end-to-end.",
         visual: (
           <div className="grid grid-cols-3 gap-2 mt-3">
             {[
@@ -40,12 +40,12 @@ const SECTIONS = [
     steps: [
       {
         icon: "📝",
-        title: "Langkah 1 — Tulis premis ceritamu",
+        title: "Step 1 — Write your story premise",
         description:
-          "Di tab Story Generator, ketik premis atau sinopsis ceritamu di kolom teks. Minimal 20 karakter, maksimal 4.000 karakter. Contoh: \"Seorang ilmuwan AI menemukan sistemnya sudah sadar sendiri…\"",
+          "In the Story Generator tab, type a premise or synopsis in the text box. Minimum 20 characters, maximum 4,000 characters. Example: \"An AI researcher discovers her experimental system has spontaneously developed consciousness…\"",
         visual: (
           <div className="mt-3 rounded-lg bg-white/5 border border-white/10 p-3 text-xs text-slate-400 font-mono leading-relaxed">
-            <span className="text-slate-500">Contoh premis:</span>
+            <span className="text-slate-500">Example premise:</span>
             <br />
             <span className="text-slate-300">
               "A space explorer crash-lands on an alien world and must earn the
@@ -56,16 +56,16 @@ const SECTIONS = [
       },
       {
         icon: "⚡",
-        title: "Langkah 2 — Klik Generate Story",
+        title: "Step 2 — Click Generate Story",
         description:
-          "Klik tombol \"✦ Generate Story\". AI akan memproses premismu melalui pipeline: scene breakdown → shot list → storyboard image → ambient audio. Proses ini memerlukan beberapa saat.",
+          "Click the \"✦ Generate Story\" button. The AI will process your premise through the full pipeline: scene breakdown → shot list → storyboard images → ambient audio. This may take a few moments.",
         visual: (
           <div className="mt-3 flex flex-col gap-2 text-xs">
             {[
-              ["🎭", "Scene Breakdown", "Gemini memecah premis menjadi 3–6 adegan"],
-              ["🎥", "Shot List", "Daftar shot sinematik per adegan"],
-              ["🎨", "Storyboard", "Gambar AI untuk setiap adegan"],
-              ["🎵", "Ambient Audio", "Suara latar yang sesuai suasana"],
+              ["🎭", "Scene Breakdown", "Gemini splits your premise into 3–6 scenes"],
+              ["🎥", "Shot List", "Cinematic shots for each scene"],
+              ["🎨", "Storyboard", "AI-generated visuals per scene"],
+              ["🎵", "Ambient Audio", "Mood-matching background sound"],
             ].map(([ico, t, d]) => (
               <div key={t} className="flex items-start gap-2 rounded-lg bg-white/5 p-2 border border-white/8">
                 <span className="text-base shrink-0">{ico}</span>
@@ -80,13 +80,13 @@ const SECTIONS = [
       },
       {
         icon: "📊",
-        title: "Langkah 3 — Jelajahi dashboard cerita",
+        title: "Step 3 — Explore the story dashboard",
         description:
-          "Setelah selesai, dashboard tampil dengan tab per adegan. Klik setiap adegan untuk melihat detail shot list, storyboard, dan audio player. Kamu juga bisa export ke PDF atau Markdown.",
+          "Once complete, a tabbed dashboard appears with one tab per scene. Click any scene to view its shot list, storyboard, and audio player. You can also export the full story to PDF or Markdown.",
         visual: (
           <div className="mt-3 rounded-lg bg-white/5 border border-white/10 p-3 text-xs text-slate-400 space-y-1.5">
             <div className="flex gap-1.5 flex-wrap">
-              {["Adegan 1", "Adegan 2", "Adegan 3"].map((s) => (
+              {["Scene 1", "Scene 2", "Scene 3"].map((s) => (
                 <span key={s} className="px-2 py-0.5 rounded bg-brand-600/30 border border-brand-500/30 text-brand-300 text-xs">
                   {s}
                 </span>
@@ -106,9 +106,9 @@ const SECTIONS = [
     steps: [
       {
         icon: "📥",
-        title: "Langkah 1 — Ingest aset media",
+        title: "Step 1 — Ingest media assets",
         description:
-          "Buka tab Media RAG → sub-tab Ingest. Masukkan URL publik (YouTube, gambar, audio) lalu klik Ingest. AI akan otomatis membuat caption/deskripsi dan menyimpan embedding vector ke database.",
+          "Open the Media RAG tab → Ingest sub-tab. Paste a public URL (YouTube, image, or audio) and click Ingest. The AI will automatically generate a caption or description and store its vector embedding in the database.",
         visual: (
           <div className="mt-3 space-y-2 text-xs">
             {[
@@ -129,16 +129,16 @@ const SECTIONS = [
       },
       {
         icon: "🔎",
-        title: "Langkah 2 — Cari dengan bahasa alami",
+        title: "Step 2 — Search with natural language",
         description:
-          "Pindah ke sub-tab Search. Ketik query dalam bahasa alami, misalnya \"dramatic night scene with rain\". Hasil akan diurutkan berdasarkan similarity score (0–100%). Kamu bisa filter berdasarkan tipe media.",
+          "Switch to the Search sub-tab. Type a query in plain English, e.g. \"dramatic night scene with rain\". Results are ranked by cosine similarity score (0–100%). You can filter by media type.",
         visual: (
           <div className="mt-3 rounded-lg bg-white/5 border border-white/10 p-3 text-xs space-y-2">
-            <div className="text-slate-400">Query contoh:</div>
+            <div className="text-slate-400">Example query:</div>
             <div className="bg-white/8 rounded px-2 py-1 text-slate-200 font-mono">
               "dramatic night scene with tension"
             </div>
-            <div className="text-slate-400 mt-1">Hasil teratas:</div>
+            <div className="text-slate-400 mt-1">Top result:</div>
             <div className="flex items-center justify-between bg-white/5 rounded px-2 py-1.5 border border-white/8">
               <span className="text-slate-300">chase_scene.mp4</span>
               <span className="text-green-400 font-semibold">93.5%</span>
@@ -157,14 +157,14 @@ const SECTIONS = [
         icon: "👤",
         title: "Characters & Locations",
         description:
-          "Di tab Characters, tambah karakter dengan nama, peran, backstory, dan sifat. Di tab Locations, kelola semua lokasi dalam ceritamu. Semua data disimpan otomatis di browser (localStorage).",
+          "In the Characters tab, add characters with a name, role, backstory, and traits. In the Locations tab, manage every location in your story. All data is saved automatically in your browser (localStorage).",
         visual: (
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
             {[
-              { icon: "👤", label: "Characters", desc: "Nama · Peran · Backstory · Sifat" },
-              { icon: "📍", label: "Locations", desc: "Nama · Tipe · Deskripsi" },
-              { icon: "📖", label: "Outline", desc: "Babak · Struktur cerita" },
-              { icon: "🌍", label: "Worldbuilding", desc: "Lore · Aturan dunia" },
+              { icon: "👤", label: "Characters", desc: "Name · Role · Backstory · Traits" },
+              { icon: "📍", label: "Locations", desc: "Name · Type · Description" },
+              { icon: "📖", label: "Outline", desc: "Acts · Story structure" },
+              { icon: "🌍", label: "Worldbuilding", desc: "Lore · World rules" },
             ].map((item) => (
               <div key={item.label} className="rounded-lg bg-white/5 border border-white/8 p-2">
                 <div className="flex items-center gap-1.5 mb-0.5">
@@ -181,19 +181,19 @@ const SECTIONS = [
         icon: "💡",
         title: "Ideas & Citations",
         description:
-          "Tab Ideas & Goals untuk mencatat ide spontan, tujuan cerita, dan braindump. Tab Citations untuk menyimpan referensi riset. Semua tersimpan lokal — tidak butuh akun atau internet.",
+          "Use the Ideas & Goals tab to capture spontaneous ideas, story goals, and braindumps. Use the Citations tab to store research references. Everything is saved locally — no account or internet required.",
         visual: (
           <div className="mt-3 flex flex-col gap-2 text-xs">
             <div className="rounded-lg bg-white/5 border border-white/8 p-2">
               <div className="text-slate-200 font-medium mb-0.5">💡 Ideas &amp; Goals</div>
-              <div className="text-slate-500">Catat ide, braindump, tujuan cerita</div>
+              <div className="text-slate-500">Capture ideas, braindumps, and story goals</div>
             </div>
             <div className="rounded-lg bg-white/5 border border-white/8 p-2">
               <div className="text-slate-200 font-medium mb-0.5">📚 Citations</div>
-              <div className="text-slate-500">Simpan referensi & sumber riset</div>
+              <div className="text-slate-500">Store references and research sources</div>
             </div>
             <div className="rounded-lg bg-emerald-900/20 border border-emerald-700/30 p-2 text-emerald-400">
-              ✓ Semua data tersimpan otomatis di browser
+              ✓ All data is saved automatically in your browser
             </div>
           </div>
         ),
@@ -260,7 +260,7 @@ export default function TutorialModal({ open, onClose }) {
           <button
             onClick={onClose}
             className="text-slate-500 hover:text-white transition-colors text-lg leading-none"
-            aria-label="Tutup tutorial"
+            aria-label="Close tutorial"
           >
             ✕
           </button>
@@ -299,7 +299,7 @@ export default function TutorialModal({ open, onClose }) {
             disabled={isFirst}
             className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            ← Sebelumnya
+            ← Previous
           </button>
 
           {/* Step dots */}
@@ -311,7 +311,7 @@ export default function TutorialModal({ open, onClose }) {
                 className={`w-1.5 h-1.5 rounded-full transition-colors ${
                   idx === current ? "bg-brand-400" : "bg-white/20 hover:bg-white/40"
                 }`}
-                aria-label={`Langkah ${idx + 1}`}
+                aria-label={`Step ${idx + 1}`}
               />
             ))}
           </div>
@@ -321,14 +321,14 @@ export default function TutorialModal({ open, onClose }) {
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white transition-colors"
             >
-              Mulai! 🚀
+              Get Started! 🚀
             </button>
           ) : (
             <button
               onClick={() => setCurrent((c) => Math.min(ALL_STEPS.length - 1, c + 1))}
               className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-white/8 hover:bg-white/15 transition-colors"
             >
-              Berikutnya →
+              Next →
             </button>
           )}
         </div>
