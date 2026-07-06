@@ -4,6 +4,8 @@ import StoryDashboard from "./components/StoryDashboard.jsx";
 import MediaRagPage from "./components/MediaRagPage.jsx";
 import WritingWorkspace from "./components/WritingWorkspace.jsx";
 import TutorialModal from "./components/TutorialModal.jsx";
+import LoginPage from "./components/LoginPage.jsx";
+import { useAuth } from "./context/AuthContext.jsx";
 import { generateStory } from "./api/mythosApi.js";
 
 // ── Nav tab component ─────────────────────────────────────────────────────────
@@ -27,24 +29,38 @@ function NavTab({ active, onClick, icon, label }) {
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const { session, signOut } = useAuth();
+
   const [page, setPage] = useState("story"); // "story" | "rag" | "workspace"
-
-  // Tutorial modal state
   const [tutorialOpen, setTutorialOpen] = useState(false);
-
-  // Auto-show tutorial on first visit
-  useEffect(() => {
-    const seen = localStorage.getItem("mythosai_tutorial_seen");
-    if (!seen) {
-      setTutorialOpen(true);
-      localStorage.setItem("mythosai_tutorial_seen", "1");
-    }
-  }, []);
-
-  // Story page state
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [storyData, setStoryData] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Auto-show tutorial on first visit (once per Supabase user)
+  useEffect(() => {
+    if (!session) return;
+    const key = `mythosai_tutorial_seen_${session.user.id}`;
+    if (!localStorage.getItem(key)) {
+      setTutorialOpen(true);
+      localStorage.setItem(key, "1");
+    }
+  }, [session]);
+
+  // Loading state while Supabase resolves session
+  if (session === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <svg className="animate-spin h-6 w-6 text-brand-500" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+      </div>
+    );
+  }
+
+  // Not authenticated → login screen
+  if (!session) return <LoginPage />;
 
   async function handleSubmit(premise) {
     setStatus("loading");
@@ -121,11 +137,24 @@ export default function App() {
           {/* Tutorial button */}
           <button
             onClick={() => setTutorialOpen(true)}
-            title="Lihat tutorial"
+            title="View tutorial"
             className="w-7 h-7 flex items-center justify-center rounded-full border border-white/15 text-slate-400 hover:text-white hover:border-white/30 text-xs font-bold transition-colors"
           >
             ?
           </button>
+          {/* User avatar + sign out */}
+          <div className="flex items-center gap-1.5 pl-1 border-l border-white/10 ml-1">
+            <span className="hidden sm:block text-xs text-slate-500 truncate max-w-[120px]">
+              {session.user.email}
+            </span>
+            <button
+              onClick={signOut}
+              title="Sign out"
+              className="px-2.5 py-1 rounded-lg text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/25 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </header>
 

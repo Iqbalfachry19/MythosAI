@@ -2,10 +2,13 @@
 
 **AI Creative Partner Suite — Multimodal Storytelling + Media RAG Platform**
 
-MythosAI has two core features:
+MythosAI has three core features:
 
 1. **Story Generator** — takes a raw premise and produces scenes, shot lists, storyboard images, and ambient audio.
 2. **Media RAG** — index images, audio files, and YouTube videos by URL, then search them semantically using natural language. Results are ranked by cosine similarity.
+3. **Writing Workspace** — local-first character manager, outline board, worldbuilding panel, locations, ideas, and citations. All stored in `localStorage`.
+
+Authentication is handled by **Supabase** (email/password + Google OAuth). The app is fully gated behind login.
 
 ---
 
@@ -41,15 +44,31 @@ mythosai/
 └── frontend/         # React + Vite + Tailwind
     ├── src/
     │   ├── main.jsx
-    │   ├── App.jsx                   # Top-level nav: Story Generator ↔ Media RAG
+    │   ├── App.jsx                       # Top-level nav + auth gate
     │   ├── index.css
+    │   ├── lib/
+    │   │   └── supabase.js               # Supabase client singleton
+    │   ├── context/
+    │   │   └── AuthContext.jsx           # Session state + signIn/signOut/Google OAuth
     │   ├── api/
-    │   │   └── mythosApi.js          # generateStory, ragIngestUrl, ragIngest, ragSearch, export
+    │   │   └── mythosApi.js              # generateStory, ragIngestUrl, ragIngest, ragSearch, export
     │   └── components/
-    │       ├── PremiseForm.jsx       # Story input UI
-    │       ├── StoryDashboard.jsx    # Tabbed scene navigator
-    │       ├── SceneCard.jsx         # Scene detail + storyboard + audio
-    │       └── MediaRagPage.jsx      # Ingest (URL / manual) + Search with ranked results
+    │       ├── LoginPage.jsx             # Email/password + Google OAuth login UI
+    │       ├── PremiseForm.jsx           # Story input UI
+    │       ├── StoryDashboard.jsx        # Tabbed scene navigator
+    │       ├── SceneCard.jsx             # Scene detail + storyboard + audio
+    │       ├── MediaRagPage.jsx          # Ingest (URL / manual) + Search with ranked results
+    │       ├── WritingWorkspace.jsx      # Workspace shell with tab bar
+    │       ├── CharacterManager.jsx      # Character CRUD + reference images
+    │       ├── LocationManager.jsx       # Location CRUD + reference images
+    │       ├── WorldbuildingPanel.jsx    # World entry CRUD + reference images
+    │       ├── OutlineBoard.jsx          # Act/chapter outline + Kanban view
+    │       ├── BraindumpBoard.jsx        # Ideas capture + writing goals
+    │       ├── CitationTracker.jsx       # Research references + APA export
+    │       ├── TutorialModal.jsx         # Step-by-step onboarding popup
+    │       ├── ConfirmDialog.jsx         # Reusable delete confirmation dialog
+    │       └── ImageUploadField.jsx      # File upload or URL for reference images
+    ├── .env.example
     ├── index.html
     ├── vite.config.js
     ├── tailwind.config.js
@@ -101,7 +120,29 @@ Search:  query → embed → AstraDB vector find → ranked results (score 0–1
 
 ## Setup
 
-### 1. Backend
+### 1. Supabase (Authentication)
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Go to **Project Settings → API** and copy:
+   - **Project URL** (`VITE_SUPABASE_URL`)
+   - **Publishable / anon key** (`VITE_SUPABASE_PUBLISHABLE_KEY`)
+3. Create `frontend/.env` from the example and fill in the values:
+
+```bash
+cp frontend/.env.example frontend/.env
+# then edit the file with your real keys
+```
+
+```env
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key-here
+```
+
+4. *(Optional)* To enable **Google OAuth**, go to **Authentication → Providers → Google** in the Supabase dashboard and add your Google client credentials. The redirect URL to whitelist is `http://localhost:5173` (dev) or your production domain.
+
+> **Email confirmation** — Supabase sends a confirmation email on sign-up by default. You can disable this in **Authentication → Settings → Email Auth → Confirm email** for easier local testing.
+
+### 2. Backend
 
 ```bash
 cd backend
@@ -111,7 +152,7 @@ npm install
 npm run dev
 ```
 
-### 2. Frontend
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -119,11 +160,34 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173) — you will be prompted to sign in or create an account.
+
+---
+
+## Authentication Flow
+
+```
+User lands on app
+      │
+      ▼
+AuthContext checks Supabase session
+      ├── session === undefined  →  Loading spinner
+      ├── session === null       →  LoginPage (email/password or Google OAuth)
+      └── session present        →  Full app (Story Generator, Media RAG, Writing Workspace)
+                                          │
+                                          └── "Sign out" button in header → clears session
+```
 
 ---
 
 ## Environment Variables
+
+### Frontend (Supabase Auth)
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_SUPABASE_URL` | **Yes** | Your Supabase project URL — `https://<id>.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | **Yes** | Supabase publishable / anon key |
 
 ### Story Generator
 
@@ -215,6 +279,7 @@ Open [http://localhost:5173](http://localhost:5173).
 | Layer | Technology |
 |---|---|
 | Frontend | React 18 + Vite + Tailwind CSS |
+| Authentication | Supabase (email/password + Google OAuth) |
 | Backend | Node.js 18+ / Express 4 |
 | LLM / Generation | Google Gemini 2.0 Flash, Gemini Image, Lyria 3 |
 | Embedding | Gemini `text-embedding-004` (768-dim) |

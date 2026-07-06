@@ -30,49 +30,59 @@ const TYPE_ICON = {
   "Other": "📍",
 };
 
+const INPUT = "w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500";
+const TEXTAREA = `${INPUT} resize-none h-20`;
+
 function LocationForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(initial ?? EMPTY_LOC);
   function set(f, v) { setForm((p) => ({ ...p, [f]: v })); }
 
-  const Field = ({ label, field, placeholder, multiline }) => (
-    <div>
-      <label className="text-xs text-slate-400 block mb-1">{label}</label>
-      {multiline ? (
-        <textarea
-          className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 resize-none h-20 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          placeholder={placeholder} value={form[field]} onChange={(e) => set(field, e.target.value)}
-        />
-      ) : (
-        <input
-          className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          placeholder={placeholder} value={form[field]} onChange={(e) => set(field, e.target.value)}
-        />
-      )}
-    </div>
-  );
-
   return (
     <form onSubmit={(e) => { e.preventDefault(); if (!form.name.trim()) return; onSave(form); }} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Location Name *" field="name" placeholder="The Obsidian Tower" />
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Location Name *</label>
+          <input className={INPUT} placeholder="The Obsidian Tower" value={form.name} onChange={(e) => set("name", e.target.value)} />
+        </div>
         <div>
           <label className="text-xs text-slate-400 block mb-1">Type</label>
-          <select
-            className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={form.type} onChange={(e) => set("type", e.target.value)}
-          >
+          <select className={INPUT} value={form.type} onChange={(e) => set("type", e.target.value)}>
             {LOCATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
-        <Field label="Region / Country" field="region" placeholder="Northern Reaches" />
-        <Field label="Climate" field="climate" placeholder="Arctic, arid, temperate…" />
-        <Field label="Inhabitants" field="inhabitants" placeholder="Mages, soldiers, spirits…" />
-        <Field label="Tags" field="tags" placeholder="dungeon, magic, pivotal" />
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Region / Country</label>
+          <input className={INPUT} placeholder="Northern Reaches" value={form.region} onChange={(e) => set("region", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Climate</label>
+          <input className={INPUT} placeholder="Arctic, arid, temperate…" value={form.climate} onChange={(e) => set("climate", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Inhabitants</label>
+          <input className={INPUT} placeholder="Mages, soldiers, spirits…" value={form.inhabitants} onChange={(e) => set("inhabitants", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Tags</label>
+          <input className={INPUT} placeholder="dungeon, magic, pivotal" value={form.tags} onChange={(e) => set("tags", e.target.value)} />
+        </div>
       </div>
-      <Field label="Atmosphere / Mood" field="atmosphere" placeholder="Oppressive, mysterious, serene…" />
-      <Field label="Description" field="description" placeholder="Visual overview of the location…" multiline />
-      <Field label="Key Details" field="keyDetails" placeholder="Notable rooms, hazards, secrets…" multiline />
-      <Field label="Sensory Details" field="sensoryDetails" placeholder="Sounds, smells, textures to evoke in writing…" multiline />
+      <div>
+        <label className="text-xs text-slate-400 block mb-1">Atmosphere / Mood</label>
+        <input className={INPUT} placeholder="Oppressive, mysterious, serene…" value={form.atmosphere} onChange={(e) => set("atmosphere", e.target.value)} />
+      </div>
+      <div>
+        <label className="text-xs text-slate-400 block mb-1">Description</label>
+        <textarea className={TEXTAREA} placeholder="Visual overview of the location…" value={form.description} onChange={(e) => set("description", e.target.value)} />
+      </div>
+      <div>
+        <label className="text-xs text-slate-400 block mb-1">Key Details</label>
+        <textarea className={TEXTAREA} placeholder="Notable rooms, hazards, secrets…" value={form.keyDetails} onChange={(e) => set("keyDetails", e.target.value)} />
+      </div>
+      <div>
+        <label className="text-xs text-slate-400 block mb-1">Sensory Details</label>
+        <textarea className={TEXTAREA} placeholder="Sounds, smells, textures to evoke in writing…" value={form.sensoryDetails} onChange={(e) => set("sensoryDetails", e.target.value)} />
+      </div>
       <ImageUploadField
         label="Reference Image"
         value={form.refImageUrl}
@@ -99,9 +109,7 @@ function LocationCard({ loc, onEdit, onDelete }) {
         onConfirm={() => { setConfirmOpen(false); onDelete(loc.id); }}
         onCancel={() => setConfirmOpen(false)}
       />
-
       <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
-        {/* ── Header row ── */}
         <div
           className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors"
           onClick={() => setOpen((v) => !v)}
@@ -128,10 +136,8 @@ function LocationCard({ loc, onEdit, onDelete }) {
           <span className="text-slate-500 text-xs ml-2">{open ? "▲" : "▼"}</span>
         </div>
 
-        {/* ── Expanded detail ── */}
         {open && (
           <div className="border-t border-white/10 px-4 pb-4 pt-3 text-xs text-slate-300 space-y-2">
-            {/* Reference image full size */}
             {loc.refImageUrl && (
               <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5">
                 <img
@@ -160,7 +166,6 @@ function LocationCard({ loc, onEdit, onDelete }) {
                 ))}
               </div>
             )}
-            {/* Action buttons — always visible */}
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => onEdit(loc)}
@@ -228,7 +233,6 @@ export default function LocationManager() {
         </div>
       )}
 
-      {/* Type filter */}
       <div className="flex flex-wrap gap-2">
         {["All", ...LOCATION_TYPES].map((t) => (
           <button key={t}

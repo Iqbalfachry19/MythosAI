@@ -21,6 +21,10 @@ const EMPTY_CHAR = {
   tags: "",
 };
 
+// ── shared input / textarea classes ──────────────────────────────────────────
+const INPUT = "w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500";
+const TEXTAREA = `${INPUT} resize-none h-20`;
+
 function CharacterForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(initial ?? EMPTY_CHAR);
 
@@ -34,44 +38,62 @@ function CharacterForm({ initial, onSave, onCancel }) {
     onSave(form);
   }
 
-  const Field = ({ label, field, placeholder, multiline }) => (
-    <div>
-      <label className="block text-xs text-slate-400 mb-1">{label}</label>
-      {multiline ? (
-        <textarea
-          className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 resize-none h-20 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          placeholder={placeholder}
-          value={form[field]}
-          onChange={(e) => set(field, e.target.value)}
-        />
-      ) : (
-        <input
-          className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          placeholder={placeholder}
-          value={form[field]}
-          onChange={(e) => set(field, e.target.value)}
-        />
-      )}
-    </div>
-  );
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Name *" field="name" placeholder="Elara Voss" />
-        <Field label="Role / Archetype" field="role" placeholder="Protagonist, Mentor…" />
-        <Field label="Age" field="age" placeholder="28" />
-        <Field label="Gender" field="gender" placeholder="Female" />
-        <Field label="Hair Style" field="hairStyle" placeholder="Short silver bob" />
-        <Field label="Eye Color" field="eyeColor" placeholder="Amber" />
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Name *</label>
+          <input className={INPUT} placeholder="Elara Voss" value={form.name} onChange={(e) => set("name", e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Role / Archetype</label>
+          <input className={INPUT} placeholder="Protagonist, Mentor…" value={form.role} onChange={(e) => set("role", e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Age</label>
+          <input className={INPUT} placeholder="28" value={form.age} onChange={(e) => set("age", e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Gender</label>
+          <input className={INPUT} placeholder="Female" value={form.gender} onChange={(e) => set("gender", e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Hair Style</label>
+          <input className={INPUT} placeholder="Short silver bob" value={form.hairStyle} onChange={(e) => set("hairStyle", e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Eye Color</label>
+          <input className={INPUT} placeholder="Amber" value={form.eyeColor} onChange={(e) => set("eyeColor", e.target.value)} />
+        </div>
       </div>
-      <Field label="Clothing / Outfit" field="clothing" placeholder="Worn leather duster, utility belt…" />
-      <Field label="Physical Appearance" field="appearance" placeholder="Tall, angular features, scar above left brow…" multiline />
-      <Field label="Personality" field="personality" placeholder="Calculated, dry humor, fiercely loyal…" multiline />
-      <Field label="Motivation / Goal" field="motivation" placeholder="What drives them? What do they fear?" multiline />
-      <Field label="Backstory" field="backstory" placeholder="Key past events…" multiline />
-      <Field label="Quirks / Habits" field="quirks" placeholder="Always hums when nervous…" />
-      <Field label="Tags (comma-separated)" field="tags" placeholder="hero, magic, warrior" />
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Clothing / Outfit</label>
+        <input className={INPUT} placeholder="Worn leather duster, utility belt…" value={form.clothing} onChange={(e) => set("clothing", e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Physical Appearance</label>
+        <textarea className={TEXTAREA} placeholder="Tall, angular features, scar above left brow…" value={form.appearance} onChange={(e) => set("appearance", e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Personality</label>
+        <textarea className={TEXTAREA} placeholder="Calculated, dry humor, fiercely loyal…" value={form.personality} onChange={(e) => set("personality", e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Motivation / Goal</label>
+        <textarea className={TEXTAREA} placeholder="What drives them? What do they fear?" value={form.motivation} onChange={(e) => set("motivation", e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Backstory</label>
+        <textarea className={TEXTAREA} placeholder="Key past events…" value={form.backstory} onChange={(e) => set("backstory", e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Quirks / Habits</label>
+        <input className={INPUT} placeholder="Always hums when nervous…" value={form.quirks} onChange={(e) => set("quirks", e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Tags (comma-separated)</label>
+        <input className={INPUT} placeholder="hero, magic, warrior" value={form.tags} onChange={(e) => set("tags", e.target.value)} />
+      </div>
       <ImageUploadField
         label="Reference Image"
         value={form.refImageUrl}
@@ -120,9 +142,7 @@ function CharacterCard({ char, onEdit, onDelete }) {
         onConfirm={() => { setConfirmOpen(false); onDelete(char.id); }}
         onCancel={() => setConfirmOpen(false)}
       />
-
       <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
-        {/* ── Header row — always click to expand ── */}
         <div
           className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors"
           onClick={() => setOpen((v) => !v)}
@@ -157,10 +177,8 @@ function CharacterCard({ char, onEdit, onDelete }) {
           <span className="text-slate-500 text-xs ml-2">{open ? "▲" : "▼"}</span>
         </div>
 
-        {/* ── Expanded detail ── */}
         {open && (
           <div className="border-t border-white/10 px-4 pb-4 pt-3 space-y-3 text-xs text-slate-300">
-            {/* Reference image (full size) */}
             {char.refImageUrl && (
               <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5">
                 <img
@@ -180,7 +198,6 @@ function CharacterCard({ char, onEdit, onDelete }) {
             {char.motivation && <Detail label="Motivation" value={char.motivation} />}
             {char.backstory && <Detail label="Backstory" value={char.backstory} />}
             {char.quirks && <Detail label="Quirks" value={char.quirks} />}
-            {/* Action buttons — always visible, no hover required */}
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => onEdit(char)}
@@ -204,7 +221,7 @@ function CharacterCard({ char, onEdit, onDelete }) {
 
 export default function CharacterManager() {
   const [characters, setCharacters] = useLocalStorage("mythos_characters", []);
-  const [view, setView] = useState("list"); // "list" | "new" | "edit"
+  const [view, setView] = useState("list");
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState("");
 

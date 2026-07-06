@@ -22,43 +22,59 @@ const EMPTY_REF = {
   usedIn: "",
 };
 
+const INPUT = "w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500";
+const TEXTAREA = `${INPUT} resize-none h-20`;
+
 function CitationForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(initial ?? EMPTY_REF);
   function set(f, v) { setForm((p) => ({ ...p, [f]: v })); }
 
-  const Field = ({ label, field, placeholder, multiline }) => (
-    <div>
-      <label className="text-xs text-slate-400 block mb-1">{label}</label>
-      {multiline ? (
-        <textarea className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 resize-none h-20 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          placeholder={placeholder} value={form[field]} onChange={(e) => set(field, e.target.value)} />
-      ) : (
-        <input className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          placeholder={placeholder} value={form[field]} onChange={(e) => set(field, e.target.value)} />
-      )}
-    </div>
-  );
-
   return (
     <form onSubmit={(e) => { e.preventDefault(); if (!form.title.trim()) return; onSave(form); }} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Title *" field="title" placeholder="The Name of the Wind" />
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Title *</label>
+          <input className={INPUT} placeholder="The Name of the Wind" value={form.title} onChange={(e) => set("title", e.target.value)} />
+        </div>
         <div>
           <label className="text-xs text-slate-400 block mb-1">Type</label>
-          <select className="w-full rounded-lg bg-white/5 border border-white/10 text-sm text-white p-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={form.type} onChange={(e) => set("type", e.target.value)}>
+          <select className={INPUT} value={form.type} onChange={(e) => set("type", e.target.value)}>
             {REF_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
-        <Field label="Author / Creator" field="author" placeholder="Patrick Rothfuss" />
-        <Field label="Publisher / Source" field="source" placeholder="DAW Books" />
-        <Field label="Year" field="year" placeholder="2007" />
-        <Field label="URL / DOI" field="url" placeholder="https://…" />
-        <Field label="Used in (chapter/section)" field="usedIn" placeholder="Ch. 3, Act 2 research…" />
-        <Field label="Tags" field="tags" placeholder="magic system, inspiration" />
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Author / Creator</label>
+          <input className={INPUT} placeholder="Patrick Rothfuss" value={form.author} onChange={(e) => set("author", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Publisher / Source</label>
+          <input className={INPUT} placeholder="DAW Books" value={form.source} onChange={(e) => set("source", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Year</label>
+          <input className={INPUT} placeholder="2007" value={form.year} onChange={(e) => set("year", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">URL / DOI</label>
+          <input className={INPUT} placeholder="https://…" value={form.url} onChange={(e) => set("url", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Used in (chapter/section)</label>
+          <input className={INPUT} placeholder="Ch. 3, Act 2 research…" value={form.usedIn} onChange={(e) => set("usedIn", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Tags</label>
+          <input className={INPUT} placeholder="magic system, inspiration" value={form.tags} onChange={(e) => set("tags", e.target.value)} />
+        </div>
       </div>
-      <Field label="Key Excerpt / Quote" field="excerpt" placeholder='Paste the relevant passage or quote…' multiline />
-      <Field label="Personal Notes" field="notes" placeholder="Why is this useful? What to borrow?" multiline />
+      <div>
+        <label className="text-xs text-slate-400 block mb-1">Key Excerpt / Quote</label>
+        <textarea className={TEXTAREA} placeholder="Paste the relevant passage or quote…" value={form.excerpt} onChange={(e) => set("excerpt", e.target.value)} />
+      </div>
+      <div>
+        <label className="text-xs text-slate-400 block mb-1">Personal Notes</label>
+        <textarea className={TEXTAREA} placeholder="Why is this useful? What to borrow?" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
+      </div>
       <div className="flex gap-3">
         <button type="submit" className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors">Save</button>
         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-white/10 text-slate-400 hover:text-white text-sm transition-colors">Cancel</button>
@@ -80,48 +96,48 @@ function CitationCard({ ref: r, onEdit, onDelete }) {
         onConfirm={() => { setConfirmOpen(false); onDelete(r.id); }}
         onCancel={() => setConfirmOpen(false)}
       />
-    <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
-      <div className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setOpen((v) => !v)}>
-        <span className="text-xl mt-0.5 shrink-0">{REF_ICONS[r.type] ?? "🔗"}</span>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-white truncate">{r.title}</div>
-          <div className="text-xs text-slate-500 mt-0.5">
-            {r.type}{r.author ? ` · ${r.author}` : ""}{r.year ? ` · ${r.year}` : ""}
-            {r.source ? ` · ${r.source}` : ""}
-          </div>
-          {r.usedIn && <div className="text-[10px] text-slate-600 mt-0.5">📖 {r.usedIn}</div>}
-        </div>
-        {r.url && (
-          <a href={r.url} target="_blank" rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="text-brand-400 hover:text-brand-300 text-xs shrink-0 px-2 py-1 rounded border border-brand-500/30 bg-brand-600/10 hover:bg-brand-600/20 transition-colors">
-            ↗ Open
-          </a>
-        )}
-        <span className="text-slate-500 text-xs ml-1">{open ? "▲" : "▼"}</span>
-      </div>
-      {open && (
-        <div className="border-t border-white/10 px-4 pb-4 pt-3 text-xs text-slate-300 space-y-2">
-          {r.excerpt && (
-            <blockquote className="border-l-2 border-brand-500/40 pl-3 text-slate-400 italic leading-relaxed">
-              {r.excerpt}
-            </blockquote>
-          )}
-          {r.notes && <div><span className="text-slate-500 font-medium">Notes: </span>{r.notes}</div>}
-          {r.tags && (
-            <div className="flex gap-1 flex-wrap pt-1">
-              {r.tags.split(",").map((t) => (
-                <span key={t} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10">{t.trim()}</span>
-              ))}
+      <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
+        <div className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setOpen((v) => !v)}>
+          <span className="text-xl mt-0.5 shrink-0">{REF_ICONS[r.type] ?? "🔗"}</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-white truncate">{r.title}</div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              {r.type}{r.author ? ` · ${r.author}` : ""}{r.year ? ` · ${r.year}` : ""}
+              {r.source ? ` · ${r.source}` : ""}
             </div>
-          )}
-          <div className="flex gap-2 pt-1">
-            <button onClick={() => onEdit(r)} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">✏ Edit</button>
-            <button onClick={() => setConfirmOpen(true)} className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">🗑 Delete</button>
+            {r.usedIn && <div className="text-[10px] text-slate-600 mt-0.5">📖 {r.usedIn}</div>}
           </div>
+          {r.url && (
+            <a href={r.url} target="_blank" rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-brand-400 hover:text-brand-300 text-xs shrink-0 px-2 py-1 rounded border border-brand-500/30 bg-brand-600/10 hover:bg-brand-600/20 transition-colors">
+              ↗ Open
+            </a>
+          )}
+          <span className="text-slate-500 text-xs ml-1">{open ? "▲" : "▼"}</span>
         </div>
-      )}
-    </div>
+        {open && (
+          <div className="border-t border-white/10 px-4 pb-4 pt-3 text-xs text-slate-300 space-y-2">
+            {r.excerpt && (
+              <blockquote className="border-l-2 border-brand-500/40 pl-3 text-slate-400 italic leading-relaxed">
+                {r.excerpt}
+              </blockquote>
+            )}
+            {r.notes && <div><span className="text-slate-500 font-medium">Notes: </span>{r.notes}</div>}
+            {r.tags && (
+              <div className="flex gap-1 flex-wrap pt-1">
+                {r.tags.split(",").map((t) => (
+                  <span key={t} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10">{t.trim()}</span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => onEdit(r)} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">✏ Edit</button>
+              <button onClick={() => setConfirmOpen(true)} className="px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">🗑 Delete</button>
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 }
@@ -150,7 +166,6 @@ export default function CitationTracker() {
       (r.tags || "").toLowerCase().includes(search.toLowerCase()))
   );
 
-  // Auto-format citation (APA-ish)
   function formatApa(r) {
     const parts = [];
     if (r.author) parts.push(r.author);
@@ -189,7 +204,6 @@ export default function CitationTracker() {
         </div>
       )}
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-2">
         {["All", ...REF_TYPES].map((t) => (
           <button key={t} onClick={() => setFilterType(t)}
@@ -213,7 +227,6 @@ export default function CitationTracker() {
         </div>
       )}
 
-      {/* Export as APA list */}
       {refs.length > 0 && (
         <details className="rounded-xl border border-white/10 bg-white/2 overflow-hidden">
           <summary className="px-4 py-3 text-xs text-slate-400 cursor-pointer hover:text-white transition-colors select-none">
