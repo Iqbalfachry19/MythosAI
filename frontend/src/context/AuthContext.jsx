@@ -31,11 +31,8 @@ export function AuthProvider({ children }) {
   }
 
   async function signInWithGoogle() {
-    const redirect =
-      import.meta.env.VITE_OAUTH_REDIRECT_URL ?? window.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: redirect },
     });
     if (error) throw error;
   }
