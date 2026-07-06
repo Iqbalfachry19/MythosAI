@@ -15,7 +15,7 @@ const HAS_GEMINI = GEMINI_KEY && !GEMINI_KEY.startsWith("AIza...");
 
 const ai = HAS_GEMINI ? new GoogleGenAI({ apiKey: GEMINI_KEY }) : null;
 
-const EMBEDDING_MODEL = "text-embedding-004"; // 768 dims, free tier friendly
+const EMBEDDING_MODEL = "gemini-embedding-2"; // 768 dims, free tier friendly
 
 /**
  * Embeds a single text string and returns a float32 array (length 768).
