@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage.js";
+import { useSupabaseStorage } from "../hooks/useSupabaseStorage.js";
 import { v4 as uuidv4 } from "uuid";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 import ImageUploadField from "./ImageUploadField.jsx";
@@ -220,7 +220,7 @@ function CharacterCard({ char, onEdit, onDelete }) {
 }
 
 export default function CharacterManager() {
-  const [characters, setCharacters] = useLocalStorage("mythos_characters", []);
+  const [characters, setCharacters] = useSupabaseStorage("mythos_characters", []);
   const [view, setView] = useState("list");
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState("");

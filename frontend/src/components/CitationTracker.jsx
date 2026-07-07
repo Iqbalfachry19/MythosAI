@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage.js";
+import { useSupabaseStorage } from "../hooks/useSupabaseStorage.js";
 import { v4 as uuidv4 } from "uuid";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 
@@ -143,7 +143,7 @@ function CitationCard({ ref: r, onEdit, onDelete }) {
 }
 
 export default function CitationTracker() {
-  const [refs, setRefs] = useLocalStorage("mythos_citations", []);
+  const [refs, setRefs] = useSupabaseStorage("mythos_citations", []);
   const [view, setView] = useState("list");
   const [editing, setEditing] = useState(null);
   const [filterType, setFilterType] = useState("All");

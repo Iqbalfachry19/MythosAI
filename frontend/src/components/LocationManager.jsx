@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage.js";
+import { useSupabaseStorage } from "../hooks/useSupabaseStorage.js";
 import { v4 as uuidv4 } from "uuid";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 import ImageUploadField from "./ImageUploadField.jsx";
@@ -188,7 +188,7 @@ function LocationCard({ loc, onEdit, onDelete }) {
 }
 
 export default function LocationManager() {
-  const [locations, setLocations] = useLocalStorage("mythos_locations", []);
+  const [locations, setLocations] = useSupabaseStorage("mythos_locations", []);
   const [view, setView] = useState("list");
   const [editing, setEditing] = useState(null);
   const [filterType, setFilterType] = useState("All");

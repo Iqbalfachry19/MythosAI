@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage.js";
+import { useSupabaseStorage } from "../hooks/useSupabaseStorage.js";
 import { v4 as uuidv4 } from "uuid";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 import ImageUploadField from "./ImageUploadField.jsx";
@@ -215,7 +215,7 @@ function EntryCard({ entry, onEdit, onDelete }) {
 }
 
 export default function WorldbuildingPanel() {
-  const [entries, setEntries] = useLocalStorage("mythos_world", []);
+  const [entries, setEntries] = useSupabaseStorage("mythos_world", []);
   const [view, setView] = useState("list"); // "list" | "new" | "edit"
   const [editing, setEditing] = useState(null);
   const [filterCat, setFilterCat] = useState("All");

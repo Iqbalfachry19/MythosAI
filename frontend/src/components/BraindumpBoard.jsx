@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage.js";
+import { useSupabaseStorage } from "../hooks/useSupabaseStorage.js";
 import { v4 as uuidv4 } from "uuid";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 
@@ -127,8 +127,8 @@ function GoalCard({ goal, onUpdate, onDelete }) {
 // ── BraindumpBoard ────────────────────────────────────────────────────────────
 
 export default function BraindumpBoard() {
-  const [ideas, setIdeas] = useLocalStorage("mythos_ideas", []);
-  const [goals, setGoals] = useLocalStorage("mythos_goals", []);
+  const [ideas, setIdeas] = useSupabaseStorage("mythos_ideas", []);
+  const [goals, setGoals] = useSupabaseStorage("mythos_goals", []);
   const [tab, setTab] = useState("ideas"); // "ideas" | "goals"
 
   // Idea form state

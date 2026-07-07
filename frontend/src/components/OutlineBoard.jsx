@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage.js";
+import { useSupabaseStorage } from "../hooks/useSupabaseStorage.js";
 import { v4 as uuidv4 } from "uuid";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 
@@ -190,7 +190,7 @@ function KanbanView({ acts, onStatusChange }) {
 }
 
 export default function OutlineBoard() {
-  const [acts, setActs] = useLocalStorage("mythos_outline", [EMPTY_ACT(1)]);
+  const [acts, setActs] = useSupabaseStorage("mythos_outline", [EMPTY_ACT(1)]);
   const [viewMode, setViewMode] = useState("list"); // "list" | "kanban"
   const [editingChapter, setEditingChapter] = useState(null); // { actId, chapter }
   const [addingActChapter, setAddingActChapter] = useState(null); // actId
