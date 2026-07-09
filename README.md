@@ -2,6 +2,10 @@
 
 **AI Creative Partner Suite — Multimodal Storytelling + Media RAG Platform**
 
+Problem:
+Novice digital storytellers, narrative content creators, and scriptwriters frequently experience severe writer's block when trying to develop raw premises into complex plotlines and consistent fictional worlds. This struggle is heavily compounded during the pre-production phase, where drafting storyboards and sourcing matching visual or audio references is completely fragmented across multiple platforms. Because this asset-hunting process is highly manual and slow, creators constantly lose their initial creative momentum and the core emotional essence of their stories along the way.
+
+
 MythosAI has three core features:
 
 1. **Story Generator** — takes a raw premise and produces scenes, shot lists, storyboard images, and ambient audio.
