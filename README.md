@@ -291,3 +291,20 @@ AuthContext checks Supabase session
 | YouTube metadata | ytdl-core + YouTube oEmbed API |
 | Export | PDFKit (PDF), plain Markdown |
 | Coding Agent for generating the backend and frontend code | IBM Bob |
+
+## IBM Bob Usage
+
+IBM Bob was used as the primary AI coding assistant throughout the development of MythosAI.
+
+Specifically IBM Bob assisted with:
+
+- Designing the backend Express architecture.
+- Generating REST API endpoints.
+- Implementing Media RAG ingestion pipelines.
+- Creating React frontend components.
+- Refactoring reusable modules.
+- Producing API documentation.
+- Debugging runtime errors.
+- Improving project structure and developer productivity.
+
+IBM Bob acted as an AI pair programmer during the entire software development lifecycle.
