@@ -286,3 +286,4 @@ AuthContext checks Supabase session
 | Vector Database | DataStax AstraDB (cosine similarity) |
 | YouTube metadata | ytdl-core + YouTube oEmbed API |
 | Export | PDFKit (PDF), plain Markdown |
+| Coding Agent | IBM Bob |
