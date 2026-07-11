@@ -162,7 +162,7 @@ export default function App() {
       <TutorialModal open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
 
       {/* ── Main ───────────────────────────────────────────────────────── */}
-      <main className="flex-1 px-4 py-8 max-w-5xl mx-auto w-full">
+      <main className={`flex-1 w-full ${page === "workspace" ? "px-4 py-4" : "px-4 py-8 max-w-5xl mx-auto"}`}>
         {/* ── Story page ── */}
         {page === "story" && (
           <>
@@ -187,10 +187,12 @@ export default function App() {
         {page === "workspace" && <WritingWorkspace />}
       </main>
 
-      {/* ── Footer ─────────────────────────────────────────────────────── */}
-      <footer className="text-center text-xs text-slate-600 py-4 border-t border-white/5">
-        MythosAI — AI Creative Partner Suite &nbsp;·&nbsp; Multimodal Storytelling + Media RAG
-      </footer>
+      {/* ── Footer — hidden in workspace to give max canvas space ── */}
+      {page !== "workspace" && (
+        <footer className="text-center text-xs text-slate-600 py-4 border-t border-white/5">
+          MythosAI — AI Creative Partner Suite &nbsp;·&nbsp; Multimodal Storytelling + Media RAG
+        </footer>
+      )}
     </div>
   );
 }
