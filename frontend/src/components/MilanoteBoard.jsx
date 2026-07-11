@@ -487,9 +487,17 @@ export default function MilanoteBoard() {
   }
 
   function handleWheel(e) {
-    if (e.target.closest("[data-scrollable]")) return; // biarin scroll native jalan
+    if (e.target.closest("[data-scrollable]")) return; // biarin scroll native di dalam module card
     e.preventDefault();
-    setZoom((z) => clamp(z + (-e.deltaY * 0.001), 0.15, 3));
+
+    const isPinch = e.ctrlKey || e.metaKey; // trackpad pinch & ctrl+scroll dikirim sbg wheel dgn ctrlKey=true
+
+    if (isPinch) {
+      setZoom((z) => clamp(z + (-e.deltaY * 0.01), 0.15, 3));
+    } else {
+      // scroll biasa → geser canvas (pan)
+      setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }));
+    }
   }
 
   useEffect(() => {
@@ -551,7 +559,7 @@ export default function MilanoteBoard() {
           </h2>
         )}
         <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-faint)" }}>
-          Drag canvas · Scroll to zoom · Drag card header to move
+          Scroll or drag to pan · Pinch to zoom · Drag card header to move
         </span>
       </div>
 
