@@ -72,7 +72,7 @@ function newCard(type, pos) {
     case "IMAGE": return { ...base, src: "", caption: "" };
     case "LINK": return { ...base, url: "", title: "", favicon: "" };
     case "TODO": return { ...base, title: "To-do", items: [] };
-    case "COLUMN": return { ...base, label: "Column", notes: [] };
+    case "COLUMN": return { ...base, label: "Column", items: [] };
     default: return base;
   }
 }
@@ -217,53 +217,68 @@ function TodoCard({ card, onChange, onDelete }) {
   );
 }
 
-function ColumnCard({ card, onChange, onDelete }) {
-  const notes = card.notes || [];
+function ColumnCard({ card, onChange, onDelete, isDragTarget }) {
+  const items = card.items || [];
 
-  function addNote() {
-    onChange({ notes: [...notes, { id: uuidv4(), content: "", color: NOTE_COLORS[0] }] });
+  function addItem(type) {
+    const newItem = type === "NOTE"
+      ? { id: uuidv4(), type: "NOTE", content: "", color: NOTE_COLORS[0] }
+      : { id: uuidv4(), type: "TODO", title: "To-do", items: [] };
+    onChange({ items: [...items, newItem] });
   }
-  function updateNote(id, patch) {
-    onChange({ notes: notes.map((n) => (n.id === id ? { ...n, ...patch } : n)) });
+  function updateItem(id, patch) {
+    onChange({ items: items.map((it) => (it.id === id ? { ...it, ...patch } : it)) });
   }
-  function deleteNote(id) {
-    onChange({ notes: notes.filter((n) => n.id !== id) });
+  function deleteItem(id) {
+    onChange({ items: items.filter((it) => it.id !== id) });
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", background: "rgba(148,163,184,0.05)", border: "1px solid rgba(148,163,184,0.18)", borderRadius: 14, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div
+      data-column-dropzone={card.id}
+      style={{
+        width: "100%", height: "100%",
+        background: isDragTarget ? "rgba(129,140,248,0.08)" : "rgba(148,163,184,0.05)",
+        border: isDragTarget ? "1.5px dashed #818cf8" : "1px solid rgba(148,163,184,0.18)",
+        borderRadius: 14, display: "flex", flexDirection: "column", overflow: "hidden",
+        transition: "background 0.15s, border-color 0.15s",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid rgba(148,163,184,0.12)", flexShrink: 0 }}>
         <span style={{ fontSize: 13 }}>📋</span>
         <input value={card.label} onChange={(e) => onChange({ label: e.target.value })} placeholder="Column name…" onClick={(e) => e.stopPropagation()}
           style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#cbd5e1", fontWeight: 700, fontSize: 13, letterSpacing: 0.3, textTransform: "uppercase" }} />
-        <span style={{ fontSize: 10, color: "#475569" }}>{notes.length}</span>
+        <span style={{ fontSize: 10, color: "#475569" }}>{items.length}</span>
         <button onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 12 }}>✕</button>
       </div>
 
       <div
         data-scrollable
-        style={{ flex: 1, overflowY: "auto", padding: "10px", display: "flex", flexDirection: "column", gap: 8 }}
+        style={{ flex: 1, overflowY: "auto", padding: "10px", display: "flex", flexDirection: "column", gap: 10 }}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {notes.map((note) => (
-          <div key={note.id} style={{ background: note.color?.bg ?? "#fef08a", borderRadius: 8, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 2 }}>
-            <div style={{ display: "flex", gap: 3, justifyContent: "flex-end" }}>
-              {NOTE_COLORS.map((c) => (
-                <button key={c.label} title={c.label} onClick={() => updateNote(note.id, { color: c })}
-                  style={{ width: 10, height: 10, borderRadius: "50%", background: c.bg, border: note.color?.label === c.label ? "2px solid rgba(0,0,0,0.4)" : "1px solid rgba(0,0,0,0.15)", cursor: "pointer", flexShrink: 0 }} />
-              ))}
-              <button onClick={() => deleteNote(note.id)} style={{ marginLeft: 4, background: "none", border: "none", color: "rgba(0,0,0,0.35)", cursor: "pointer", fontSize: 11, lineHeight: 1 }}>✕</button>
-            </div>
-            <textarea value={note.content} onChange={(e) => updateNote(note.id, { content: e.target.value })}
-              placeholder="Write something…"
-              style={{ background: "transparent", border: "none", outline: "none", resize: "none", minHeight: 50, fontSize: 12.5, color: note.color?.text ?? "#1a1a00", fontFamily: "inherit", lineHeight: 1.5 }} />
+        {items.map((item) => (
+          <div key={item.id} style={{ height: item.type === "TODO" ? 220 : 170, flexShrink: 0 }}>
+            {item.type === "NOTE" && (
+              <NoteCard card={item} onChange={(patch) => updateItem(item.id, patch)} onDelete={() => deleteItem(item.id)} />
+            )}
+            {item.type === "TODO" && (
+              <TodoCard card={item} onChange={(patch) => updateItem(item.id, patch)} onDelete={() => deleteItem(item.id)} />
+            )}
           </div>
         ))}
-        <button onClick={addNote}
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(148,163,184,0.3)", borderRadius: 8, padding: "8px", color: "#64748b", fontSize: 12, cursor: "pointer" }}>
-          + Add note
-        </button>
+
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={() => addItem("NOTE")}
+            style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(148,163,184,0.3)", borderRadius: 8, padding: "7px", color: "#64748b", fontSize: 11.5, cursor: "pointer" }}>
+            📝 + Note
+          </button>
+          <button onClick={() => addItem("TODO")}
+            style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(148,163,184,0.3)", borderRadius: 8, padding: "7px", color: "#64748b", fontSize: 11.5, cursor: "pointer" }}>
+            ✅ + To-do
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -338,7 +353,8 @@ function ModuleCard({ card, onDelete, onHeaderMouseDown }) {
 
 // ── Draggable Board Card ───────────────────────────────────────────────────────
 
-function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelect, zoom }) {
+function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelect, zoom, onDropIntoColumn, onDragOverColumn, dragOverColumnId }) {
+
   const dragRef = useRef({ active: false });
   const resizeRef = useRef({ active: false });
 
@@ -349,12 +365,29 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
     e.stopPropagation();
     onBringToFront();
     onSelect();
+    const canDropIntoColumn = card.type === "NOTE" || card.type === "TODO";
     dragRef.current = { active: true, startX: e.clientX, startY: e.clientY, origX: card.x, origY: card.y };
+
     function onMove(ev) {
       if (!dragRef.current.active) return;
       onChange({ x: dragRef.current.origX + (ev.clientX - dragRef.current.startX) / zoom, y: dragRef.current.origY + (ev.clientY - dragRef.current.startY) / zoom });
+      if (canDropIntoColumn) {
+        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+        const zone = el?.closest("[data-column-dropzone]");
+        onDragOverColumn?.(zone ? zone.getAttribute("data-column-dropzone") : null);
+      }
     }
-    function onUp() { dragRef.current.active = false; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); }
+    function onUp(ev) {
+      dragRef.current.active = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      if (canDropIntoColumn) {
+        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+        const zone = el?.closest("[data-column-dropzone]");
+        if (zone) onDropIntoColumn?.(zone.getAttribute("data-column-dropzone"));
+        onDragOverColumn?.(null);
+      }
+    }
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   }
@@ -397,7 +430,9 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
       {card.type === "IMAGE" && <ImageCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "LINK" && <LinkCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "TODO" && <TodoCard card={card} onChange={onChange} onDelete={onDelete} />}
-      {card.type === "COLUMN" && <ColumnCard card={card} onChange={onChange} onDelete={onDelete} />}
+      {card.type === "COLUMN" && (
+        <ColumnCard card={card} onChange={onChange} onDelete={onDelete} isDragTarget={dragOverColumnId === card.id} />
+      )}
       {isModule && (
         <ModuleCard
           card={card}
@@ -502,7 +537,21 @@ export default function MilanoteBoard() {
   const [selectedId, setSelectedId] = useState(null);
   const [boardName, setBoardName] = useSupabaseStorage("mythos_board_name", "My Story Board");
   const [editingName, setEditingName] = useState(false);
+  const [dragOverColumnId, setDragOverColumnId] = useState(null);
 
+  function moveCardIntoColumn(cardId, columnId) {
+    if (cardId === columnId) return;
+    setCards((arr) => {
+      const dragged = arr.find((c) => c.id === cardId);
+      const column = arr.find((c) => c.id === columnId);
+      if (!dragged || !column || column.type !== "COLUMN") return arr;
+      if (dragged.type !== "NOTE" && dragged.type !== "TODO") return arr;
+      const { x, y, w, h, zIndex, createdAt, ...itemFields } = dragged;
+      const updatedColumn = { ...column, items: [...(column.items || []), itemFields] };
+      return arr.filter((c) => c.id !== cardId).map((c) => (c.id === columnId ? updatedColumn : c));
+    });
+    setSelectedId(null);
+  }
   const canvasRef = useRef(null);
   const panRef = useRef({ active: false });
 
@@ -633,6 +682,9 @@ export default function MilanoteBoard() {
               onBringToFront={() => bringToFront(card.id)}
               onChange={(patch) => updateCard(card.id, patch)}
               onDelete={() => deleteCard(card.id)}
+              onDropIntoColumn={(columnId) => moveCardIntoColumn(card.id, columnId)}
+              onDragOverColumn={setDragOverColumnId}
+              dragOverColumnId={dragOverColumnId}
             />
           ))}
         </div>
