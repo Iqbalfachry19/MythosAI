@@ -455,25 +455,7 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
   );
 }
 
-// ── Mini-map ──────────────────────────────────────────────────────────────────
 
-function MiniMap({ cards }) {
-  if (cards.length === 0) return null;
-  const W = 150, H = 90;
-  const minX = Math.min(...cards.map((c) => c.x));
-  const minY = Math.min(...cards.map((c) => c.y));
-  const maxX = Math.max(...cards.map((c) => c.x + c.w));
-  const maxY = Math.max(...cards.map((c) => c.y + c.h));
-  const rangeX = maxX - minX || 800, rangeY = maxY - minY || 600;
-  const s = Math.min(W / rangeX, H / rangeY, 0.24);
-  return (
-    <div style={{ position: "absolute", top: 14, right: 14, width: W, height: H, background: "var(--minimap-bg)", border: "1px solid var(--minimap-border)", borderRadius: 8, overflow: "hidden", zIndex: 900, backdropFilter: "blur(10px)", transition: "background 0.3s" }}>
-      {cards.map((c) => (
-        <div key={c.id} style={{ position: "absolute", left: (c.x - minX) * s, top: (c.y - minY) * s, width: Math.max(4, c.w * s), height: Math.max(3, c.h * s), background: CARD_TYPES[c.type]?.color ?? "#94a3b8", borderRadius: 2, opacity: 0.75 }} />
-      ))}
-    </div>
-  );
-}
 
 // ── Main MilanoteBoard ────────────────────────────────────────────────────────
 
@@ -620,7 +602,7 @@ export default function MilanoteBoard() {
           </div>
         )}
 
-        <MiniMap cards={cards} />
+
         <Toolbar onAdd={addCard} zoom={zoom} onZoom={handleZoom} onFitAll={fitAll} cardCount={cards.length} />
       </div>
     </div>
