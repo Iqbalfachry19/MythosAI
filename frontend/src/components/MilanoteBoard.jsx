@@ -353,24 +353,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
       onMouseDown={handleMouseDown}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
     >
-      {/* Drag handle for module cards (top bar only) */}
-      {isModule && (
-        <div
-          onMouseDown={(e) => {
-            if (e.target.closest("button")) return;
-            // Allow drag from the module header only
-            if (!e.currentTarget.contains(e.target)) return;
-            e.preventDefault(); e.stopPropagation();
-            onBringToFront(); onSelect();
-            const orig = { x: card.x, y: card.y };
-            const start = { x: e.clientX, y: e.clientY };
-            function mv(ev) { onChange({ x: orig.x + (ev.clientX - start.x) / zoom, y: orig.y + (ev.clientY - start.y) / zoom }); }
-            function up() { window.removeEventListener("mousemove", mv); window.removeEventListener("mouseup", up); }
-            window.addEventListener("mousemove", mv); window.addEventListener("mouseup", up);
-          }}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, height: 38, zIndex: 20, cursor: "grab", borderRadius: "14px 14px 0 0" }}
-        />
-      )}
+
 
       {card.type === "NOTE" && <NoteCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "TEXT" && <TextCard card={card} onChange={onChange} onDelete={onDelete} />}
