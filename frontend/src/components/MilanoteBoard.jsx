@@ -243,7 +243,7 @@ const MODULE_META = {
   CITATIONS: { label: "Citations", icon: "📚", accent: "#a78bfa", Component: CitationTracker },
 };
 
-function ModuleCard({ card, onDelete }) {
+function ModuleCard({ card, onDelete, onHeaderMouseDown }) {
   const meta = MODULE_META[card.type];
   if (!meta) return null;
   const { label, icon, accent, Component } = meta;
