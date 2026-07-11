@@ -353,7 +353,8 @@ function ModuleCard({ card, onDelete, onHeaderMouseDown }) {
 
 // ── Draggable Board Card ───────────────────────────────────────────────────────
 
-function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelect, zoom, onContextMenu, onDropIntoColumn, onDragOverColumn, dragOverColumnId }) {
+function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelect, zoom, onContextMenu, onStartConnection, onDropIntoColumn, onDragOverColumn, dragOverColumnId }) {
+  const [hovered, setHovered] = useState(false);
   const dragRef = useRef({ active: false });
   const resizeRef = useRef({ active: false });
 
@@ -408,6 +409,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
 
   return (
     <div
+      data-card-id={card.id}
       style={{
         position: "absolute", left: card.x, top: card.y,
         width: card.w, height: card.h,
@@ -423,6 +425,8 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
       onMouseDown={handleMouseDown}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
       onContextMenu={onContextMenu}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
 
 
@@ -450,6 +454,20 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
           }}
         />
       )}
+      {/* Connector handle */}
+      <div
+        onMouseDown={(e) => { e.stopPropagation(); onStartConnection(card.id, e); }}
+        title="Drag untuk hubungkan ke card lain"
+        style={{
+          position: "absolute", right: -7, top: "50%", transform: "translateY(-50%)",
+          width: 14, height: 14, borderRadius: "50%",
+          background: "#818cf8", border: "2px solid #0f172a",
+          cursor: "crosshair", zIndex: 40,
+          opacity: hovered || selected ? 1 : 0.15,
+          transition: "opacity 0.15s",
+        }}
+      />
+
       {/* Resize handle */}
       <div onMouseDown={handleResizeDown}
         style={{ position: "absolute", bottom: 0, right: 0, width: 18, height: 18, cursor: "nwse-resize", zIndex: 30, display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: 3 }}>
@@ -558,7 +576,67 @@ function ContextMenu({ x, y, items }) {
     </div>
   );
 }
+function ConnectionsLayer({ cards, connections, zoom, pendingLine, editingConnId, setEditingConnId, onUpdateLabel, onDeleteConnection }) {
+  function edgePoint(from, to) {
+    const cx = from.x + from.w / 2, cy = from.y + from.h / 2;
+    const dx = (to.x + to.w / 2) - cx, dy = (to.y + to.h / 2) - cy;
+    if (dx === 0 && dy === 0) return { x: cx, y: cy };
+    const scale = Math.min(from.w / 2 / Math.abs(dx || 1e-6), from.h / 2 / Math.abs(dy || 1e-6));
+    return { x: cx + dx * scale, y: cy + dy * scale };
+  }
 
+  return (
+    <svg style={{ position: "absolute", left: 0, top: 0, width: 1, height: 1, overflow: "visible", pointerEvents: "none" }}>
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#818cf8" />
+        </marker>
+      </defs>
+
+      {connections.map((conn) => {
+        const fromCard = cards.find((c) => c.id === conn.fromId);
+        const toCard = cards.find((c) => c.id === conn.toId);
+        if (!fromCard || !toCard) return null;
+        const p1 = edgePoint(fromCard, toCard);
+        const p2 = edgePoint(toCard, fromCard);
+        const midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
+        return (
+          <g key={conn.id}>
+            <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#818cf8" strokeWidth={2 / zoom} markerEnd="url(#arrowhead)" />
+            {/* hitbox lebih tebal buat klik/klik-kanan */}
+            <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="transparent" strokeWidth={14 / zoom}
+              style={{ pointerEvents: "stroke", cursor: "pointer" }}
+              onClick={(e) => { e.stopPropagation(); setEditingConnId(conn.id); }}
+              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteConnection(conn.id); }}
+            />
+            <foreignObject x={midX - 60} y={midY - 14} width={120} height={28} style={{ pointerEvents: "auto" }}>
+              <div onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ display: "flex", justifyContent: "center" }}>
+                {editingConnId === conn.id ? (
+                  <input autoFocus defaultValue={conn.label}
+                    onBlur={(e) => { onUpdateLabel(conn.id, e.target.value); setEditingConnId(null); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+                    style={{ fontSize: 11, textAlign: "center", background: "#1e293b", border: "1px solid #818cf8", borderRadius: 6, color: "#e2e8f0", padding: "2px 6px", width: 110 }} />
+                ) : conn.label ? (
+                  <span onClick={() => setEditingConnId(conn.id)}
+                    style={{ fontSize: 10.5, background: "#1e293b", border: "1px solid rgba(129,140,248,0.3)", borderRadius: 6, padding: "2px 8px", color: "#c7d2fe", cursor: "text", whiteSpace: "nowrap" }}>
+                    {conn.label}
+                  </span>
+                ) : (
+                  <span onClick={() => setEditingConnId(conn.id)} style={{ fontSize: 10, color: "#475569", cursor: "text", opacity: 0.6 }}>+ label</span>
+                )}
+              </div>
+            </foreignObject>
+          </g>
+        );
+      })}
+
+      {pendingLine && (
+        <line x1={pendingLine.x1} y1={pendingLine.y1} x2={pendingLine.x2} y2={pendingLine.y2}
+          stroke="#818cf8" strokeWidth={2 / zoom} strokeDasharray="6,4" pointerEvents="none" />
+      )}
+    </svg>
+  );
+}
 
 // ── Main MilanoteBoard ────────────────────────────────────────────────────────
 
@@ -572,6 +650,45 @@ export default function MilanoteBoard() {
   const [dragOverColumnId, setDragOverColumnId] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, cardId?, type: "card" | "canvas" }
   const [clipboard, setClipboard] = useState(null);      // { data, cut }
+  const [connections, setConnections] = useSupabaseStorage("mythos_milanote_connections", []);
+  const [pendingConnection, setPendingConnection] = useState(null); // { fromId, x2, y2 } world coords
+  const [editingConnId, setEditingConnId] = useState(null);
+
+  function worldPointFromScreen(clientX, clientY) {
+    const rect = canvasRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
+    return { x: (clientX - rect.left - pan.x) / zoom, y: (clientY - rect.top - pan.y) / zoom };
+  }
+
+  function startConnection(fromId, e) {
+    e.preventDefault(); e.stopPropagation();
+    const start = worldPointFromScreen(e.clientX, e.clientY);
+    setPendingConnection({ fromId, x2: start.x, y2: start.y });
+
+    function onMove(ev) {
+      const p = worldPointFromScreen(ev.clientX, ev.clientY);
+      setPendingConnection((pc) => (pc ? { ...pc, x2: p.x, y2: p.y } : pc));
+    }
+    function onUp(ev) {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const targetEl = el?.closest("[data-card-id]");
+      const toId = targetEl?.getAttribute("data-card-id");
+      if (toId && toId !== fromId) {
+        setConnections((arr) => [...arr, { id: uuidv4(), fromId, toId, label: "" }]);
+      }
+      setPendingConnection(null);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
+  function updateConnectionLabel(id, label) {
+    setConnections((arr) => arr.map((c) => (c.id === id ? { ...c, label } : c)));
+  }
+  function deleteConnection(id) {
+    setConnections((arr) => arr.filter((c) => c.id !== id));
+  }
   function openCardMenu(e, cardId) {
     e.preventDefault();
     e.stopPropagation();
@@ -695,7 +812,11 @@ export default function MilanoteBoard() {
   }
 
   function updateCard(id, patch) { setCards((arr) => arr.map((c) => c.id === id ? { ...c, ...patch } : c)); }
-  function deleteCard(id) { setCards((arr) => arr.filter((c) => c.id !== id)); if (selectedId === id) setSelectedId(null); }
+  function deleteCard(id) {
+    setCards((arr) => arr.filter((c) => c.id !== id));
+    setConnections((arr) => arr.filter((c) => c.fromId !== id && c.toId !== id));
+    if (selectedId === id) setSelectedId(null);
+  }
   function bringToFront(id) { setCards((arr) => arr.map((c) => c.id === id ? { ...c, zIndex: Date.now() } : c)); }
 
   function handleZoom(delta) {
@@ -765,6 +886,26 @@ export default function MilanoteBoard() {
 
         {/* Transformed canvas world */}
         <div style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", position: "absolute", width: 0, height: 0, zIndex: 1 }}>
+
+          <ConnectionsLayer
+            cards={cards}
+            connections={connections}
+            zoom={zoom}
+            editingConnId={editingConnId}
+            setEditingConnId={setEditingConnId}
+            onUpdateLabel={updateConnectionLabel}
+            onDeleteConnection={deleteConnection}
+            pendingLine={
+              pendingConnection
+                ? (() => {
+                  const fromCard = cards.find((c) => c.id === pendingConnection.fromId);
+                  if (!fromCard) return null;
+                  return { x1: fromCard.x + fromCard.w / 2, y1: fromCard.y + fromCard.h / 2, x2: pendingConnection.x2, y2: pendingConnection.y2 };
+                })()
+                : null
+            }
+          />
+
           {sorted.map((card) => (
             <BoardCard
               key={card.id} card={card} zoom={zoom}
@@ -774,6 +915,7 @@ export default function MilanoteBoard() {
               onChange={(patch) => updateCard(card.id, patch)}
               onDelete={() => deleteCard(card.id)}
               onContextMenu={(e) => openCardMenu(e, card.id)}
+              onStartConnection={startConnection}
               onDropIntoColumn={(columnId) => moveCardIntoColumn(card.id, columnId)}
               onDragOverColumn={setDragOverColumnId}
               dragOverColumnId={dragOverColumnId}
