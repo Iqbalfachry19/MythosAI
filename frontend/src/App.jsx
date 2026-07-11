@@ -6,6 +6,7 @@ import WritingWorkspace from "./components/WritingWorkspace.jsx";
 import TutorialModal from "./components/TutorialModal.jsx";
 import LoginPage from "./components/LoginPage.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
+import { useTheme } from "./context/ThemeContext.jsx";
 import { generateStory } from "./api/mythosApi.js";
 
 // ── Nav tab component ─────────────────────────────────────────────────────────
@@ -30,6 +31,7 @@ function NavTab({ active, onClick, icon, label }) {
 
 export default function App() {
   const { session, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const [page, setPage] = useState("story"); // "story" | "rag" | "workspace"
   const [tutorialOpen, setTutorialOpen] = useState(false);
@@ -134,6 +136,17 @@ export default function App() {
               ← New Story
             </button>
           )}
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="theme-toggle"
+            aria-label="Toggle theme"
+          >
+            <span className="icon icon-sun">☀️</span>
+            <span className="icon icon-moon">🌙</span>
+          </button>
+
           {/* Tutorial button */}
           <button
             onClick={() => setTutorialOpen(true)}

@@ -1,9 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MythosAI — Creative Partner Suite</title>
+    <!-- Prevent flash of wrong theme -->
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem("mythosai_theme") || "dark";
+          var el = document.documentElement;
+          if (t === "dark") { el.classList.add("dark"); el.setAttribute("data-theme","dark"); }
+          else { el.classList.remove("dark"); el.setAttribute("data-theme","light"); }
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

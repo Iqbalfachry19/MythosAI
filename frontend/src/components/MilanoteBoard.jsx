@@ -251,12 +251,13 @@ function ModuleCard({ card, onDelete }) {
   return (
     <div style={{
       width:"100%", height:"100%",
-      background:"rgba(10,10,22,0.97)",
+      background:"var(--bg-surface)",
       border:`1px solid ${accent}30`,
       borderRadius:14,
       display:"flex", flexDirection:"column",
       overflow:"hidden",
       backdropFilter:"blur(12px)",
+      transition:"background 0.3s",
     }}>
       {/* Module header bar */}
       <div style={{
@@ -394,10 +395,11 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
     <div style={{
       position:"absolute", bottom:20, left:"50%", transform:"translateX(-50%)",
       display:"flex", alignItems:"center", gap:0,
-      background:"rgba(10,10,22,0.95)", backdropFilter:"blur(24px)",
-      border:"1px solid rgba(255,255,255,0.09)", borderRadius:18,
-      padding:"6px 10px", zIndex:1000, boxShadow:"0 8px 40px rgba(0,0,0,0.7)",
+      background:"var(--toolbar-bg)", backdropFilter:"blur(24px)",
+      border:"1px solid var(--toolbar-border)", borderRadius:18,
+      padding:"6px 10px", zIndex:1000, boxShadow:"var(--shadow-toolbar)",
       whiteSpace:"nowrap",
+      transition:"background 0.3s, border-color 0.3s",
     }}>
       {/* Basic card types */}
       <div style={{ display:"flex",alignItems:"center",gap:2 }}>
@@ -406,17 +408,17 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
           return (
             <button key={key} onClick={()=>onAdd(key)} title={`Add ${def.label}`}
               style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:1,background:"none",border:"none",cursor:"pointer",padding:"5px 8px",borderRadius:9,transition:"background 0.12s" }}
-              onMouseEnter={(e)=>e.currentTarget.style.background="rgba(255,255,255,0.07)"}
+              onMouseEnter={(e)=>e.currentTarget.style.background="var(--bg-hover)"}
               onMouseLeave={(e)=>e.currentTarget.style.background="none"}>
               <span style={{ fontSize:16 }}>{def.icon}</span>
-              <span style={{ fontSize:9,color:"#475569",letterSpacing:0.3,textTransform:"uppercase" }}>{def.label}</span>
+              <span style={{ fontSize:9,color:"var(--text-muted)",letterSpacing:0.3,textTransform:"uppercase" }}>{def.label}</span>
             </button>
           );
         })}
       </div>
 
       {/* Divider */}
-      <div style={{ width:1,height:32,background:"rgba(255,255,255,0.08)",margin:"0 8px",flexShrink:0 }} />
+      <div style={{ width:1,height:32,background:"var(--border-subtle)",margin:"0 8px",flexShrink:0 }} />
 
       {/* Module embed types */}
       <div style={{ display:"flex",alignItems:"center",gap:2 }}>
@@ -436,17 +438,17 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
       </div>
 
       {/* Divider */}
-      <div style={{ width:1,height:32,background:"rgba(255,255,255,0.08)",margin:"0 8px",flexShrink:0 }} />
+      <div style={{ width:1,height:32,background:"var(--border-subtle)",margin:"0 8px",flexShrink:0 }} />
 
       {/* Zoom */}
       <div style={{ display:"flex",alignItems:"center",gap:4 }}>
-        <button onClick={()=>onZoom(-0.1)} style={{ background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:7,width:26,height:26,color:"#94a3b8",fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>−</button>
-        <button onClick={()=>onZoom(0)} style={{ background:"none",border:"none",color:"#475569",fontSize:10.5,cursor:"pointer",minWidth:34,textAlign:"center",fontVariantNumeric:"tabular-nums" }}>{Math.round(zoom*100)}%</button>
-        <button onClick={()=>onZoom(0.1)} style={{ background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:7,width:26,height:26,color:"#94a3b8",fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>+</button>
+        <button onClick={()=>onZoom(-0.1)} style={{ background:"var(--bg-overlay)",border:"1px solid var(--border-subtle)",borderRadius:7,width:26,height:26,color:"var(--text-secondary)",fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>−</button>
+        <button onClick={()=>onZoom(0)} style={{ background:"none",border:"none",color:"var(--text-muted)",fontSize:10.5,cursor:"pointer",minWidth:34,textAlign:"center",fontVariantNumeric:"tabular-nums" }}>{Math.round(zoom*100)}%</button>
+        <button onClick={()=>onZoom(0.1)} style={{ background:"var(--bg-overlay)",border:"1px solid var(--border-subtle)",borderRadius:7,width:26,height:26,color:"var(--text-secondary)",fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>+</button>
         <button onClick={onFitAll} style={{ background:"rgba(99,102,241,0.12)",border:"1px solid rgba(99,102,241,0.22)",borderRadius:7,padding:"3px 9px",color:"#818cf8",fontSize:10.5,cursor:"pointer",fontWeight:600 }}>Fit</button>
       </div>
 
-      {cardCount>0 && <span style={{ fontSize:9.5,color:"#1e293b",marginLeft:6 }}>{cardCount}</span>}
+      {cardCount>0 && <span style={{ fontSize:9.5,color:"var(--text-faint)",marginLeft:6 }}>{cardCount}</span>}
     </div>
   );
 }
@@ -463,7 +465,7 @@ function MiniMap({ cards }) {
   const rangeX=maxX-minX||800, rangeY=maxY-minY||600;
   const s=Math.min(W/rangeX,H/rangeY,0.24);
   return (
-    <div style={{ position:"absolute",top:14,right:14,width:W,height:H,background:"rgba(8,8,18,0.85)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:8,overflow:"hidden",zIndex:900,backdropFilter:"blur(10px)" }}>
+    <div style={{ position:"absolute",top:14,right:14,width:W,height:H,background:"var(--minimap-bg)",border:"1px solid var(--minimap-border)",borderRadius:8,overflow:"hidden",zIndex:900,backdropFilter:"blur(10px)",transition:"background 0.3s" }}>
       {cards.map((c)=>(
         <div key={c.id} style={{ position:"absolute",left:(c.x-minX)*s,top:(c.y-minY)*s,width:Math.max(4,c.w*s),height:Math.max(3,c.h*s),background:CARD_TYPES[c.type]?.color??"#94a3b8",borderRadius:2,opacity:0.75 }} />
       ))}
@@ -556,14 +558,14 @@ export default function MilanoteBoard() {
           <input autoFocus value={boardName} onChange={(e)=>setBoardName(e.target.value)}
             onBlur={()=>setEditingName(false)}
             onKeyDown={(e)=>{if(e.key==="Enter")setEditingName(false);}}
-            style={{ background:"transparent",border:"none",borderBottom:"2px solid #818cf8",outline:"none",color:"white",fontSize:20,fontWeight:700,minWidth:200 }} />
+            style={{ background:"transparent",border:"none",borderBottom:"2px solid #818cf8",outline:"none",color:"var(--text-primary)",fontSize:20,fontWeight:700,minWidth:200 }} />
         ) : (
           <h2 onClick={()=>setEditingName(true)}
-            style={{ fontSize:20,fontWeight:700,color:"white",cursor:"text",display:"flex",alignItems:"center",gap:8,margin:0 }}>
+            style={{ fontSize:20,fontWeight:700,color:"var(--text-primary)",cursor:"text",display:"flex",alignItems:"center",gap:8,margin:0 }}>
             {boardName}<span style={{ fontSize:13,opacity:0.25 }}>✎</span>
           </h2>
         )}
-        <span style={{ marginLeft:"auto",fontSize:11,color:"#1e293b" }}>
+        <span style={{ marginLeft:"auto",fontSize:11,color:"var(--text-faint)" }}>
           Drag canvas · Scroll to zoom · Drag card header to move
         </span>
       </div>
@@ -574,24 +576,22 @@ export default function MilanoteBoard() {
         onMouseDown={handleCanvasMouseDown}
         style={{
           flex:1, position:"relative", overflow:"hidden",
-          borderRadius:16, border:"1px solid rgba(255,255,255,0.06)",
+          borderRadius:16, border:"1px solid var(--border-subtle)",
           cursor:"default",
+          transition:"border-color 0.3s",
         }}
       >
         {/* Grid background layer — marked so mousedown can detect it */}
         <div className="board-bg" style={{
           position:"absolute", inset:0, zIndex:0,
-          background:`
-            radial-gradient(ellipse at 25% 35%, rgba(99,102,241,0.05) 0%, transparent 55%),
-            radial-gradient(ellipse at 75% 65%, rgba(139,92,246,0.05) 0%, transparent 55%),
-            #09090f
-          `,
+          background:"var(--canvas-bg)",
           backgroundImage:`
-            radial-gradient(ellipse at 25% 35%, rgba(99,102,241,0.05) 0%, transparent 55%),
-            radial-gradient(ellipse at 75% 65%, rgba(139,92,246,0.05) 0%, transparent 55%),
-            repeating-linear-gradient(rgba(255,255,255,0.016) 0px, rgba(255,255,255,0.016) 1px, transparent 1px, transparent 44px),
-            repeating-linear-gradient(90deg, rgba(255,255,255,0.016) 0px, rgba(255,255,255,0.016) 1px, transparent 1px, transparent 44px)
+            radial-gradient(ellipse at 25% 35%, var(--canvas-glow1) 0%, transparent 55%),
+            radial-gradient(ellipse at 75% 65%, var(--canvas-glow2) 0%, transparent 55%),
+            repeating-linear-gradient(var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px),
+            repeating-linear-gradient(90deg, var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px)
           `,
+          transition:"background 0.3s",
         }} />
 
         {/* Transformed canvas world */}
@@ -612,8 +612,8 @@ export default function MilanoteBoard() {
         {cards.length===0&&(
           <div style={{ position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:2 }}>
             <div style={{ fontSize:44,marginBottom:14,opacity:0.12 }}>🎨</div>
-            <p style={{ color:"#1e293b",fontSize:15,fontWeight:600 }}>Board is empty</p>
-            <p style={{ color:"#0f172a",fontSize:12,marginTop:6 }}>Use the toolbar below — add notes, or embed Characters, Outline, and more</p>
+            <p style={{ color:"var(--text-muted)",fontSize:15,fontWeight:600 }}>Board is empty</p>
+            <p style={{ color:"var(--text-faint)",fontSize:12,marginTop:6 }}>Use the toolbar below — add notes, or embed Characters, Outline, and more</p>
           </div>
         )}
 

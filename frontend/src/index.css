@@ -2,7 +2,238 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #0f0f1a;
-  color: #e2e8f0;
+/* ── CSS Variables ─────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="dark"] {
+  --bg-base:        #0f0f1a;
+  --bg-surface:     #13131f;
+  --bg-elevated:    #1a1a2e;
+  --bg-overlay:     rgba(255,255,255,0.04);
+  --bg-hover:       rgba(255,255,255,0.07);
+  --bg-input:       rgba(255,255,255,0.05);
+  --bg-card:        rgba(255,255,255,0.03);
+
+  --border-subtle:  rgba(255,255,255,0.08);
+  --border-default: rgba(255,255,255,0.12);
+  --border-strong:  rgba(255,255,255,0.2);
+
+  --text-primary:   #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --text-faint:     #334155;
+  --text-inverse:   #0f172a;
+
+  --canvas-bg:      #09090f;
+  --canvas-grid:    rgba(255,255,255,0.016);
+  --canvas-glow1:   rgba(99,102,241,0.05);
+  --canvas-glow2:   rgba(139,92,246,0.05);
+
+  --toolbar-bg:     rgba(10,10,22,0.95);
+  --toolbar-border: rgba(255,255,255,0.09);
+
+  --minimap-bg:     rgba(8,8,18,0.85);
+  --minimap-border: rgba(255,255,255,0.07);
+
+  --header-bg:      transparent;
+  --header-border:  rgba(255,255,255,0.10);
+
+  --note-dark-bg:   #1e293b;
+  --note-dark-text: #e2e8f0;
+
+  --shadow-card:    0 4px 24px rgba(0,0,0,0.4);
+  --shadow-toolbar: 0 8px 40px rgba(0,0,0,0.7);
 }
+
+[data-theme="light"] {
+  --bg-base:        #f0f2f8;
+  --bg-surface:     #f8f9fc;
+  --bg-elevated:    #ffffff;
+  --bg-overlay:     rgba(0,0,0,0.03);
+  --bg-hover:       rgba(0,0,0,0.05);
+  --bg-input:       rgba(0,0,0,0.04);
+  --bg-card:        rgba(255,255,255,0.9);
+
+  --border-subtle:  rgba(0,0,0,0.07);
+  --border-default: rgba(0,0,0,0.12);
+  --border-strong:  rgba(0,0,0,0.22);
+
+  --text-primary:   #1e293b;
+  --text-secondary: #475569;
+  --text-muted:     #64748b;
+  --text-faint:     #94a3b8;
+  --text-inverse:   #ffffff;
+
+  --canvas-bg:      #e8ebf4;
+  --canvas-grid:    rgba(0,0,0,0.04);
+  --canvas-glow1:   rgba(99,102,241,0.04);
+  --canvas-glow2:   rgba(139,92,246,0.04);
+
+  --toolbar-bg:     rgba(255,255,255,0.96);
+  --toolbar-border: rgba(0,0,0,0.10);
+
+  --minimap-bg:     rgba(255,255,255,0.9);
+  --minimap-border: rgba(0,0,0,0.10);
+
+  --header-bg:      rgba(255,255,255,0.8);
+  --header-border:  rgba(0,0,0,0.08);
+
+  --note-dark-bg:   #334155;
+  --note-dark-text: #f1f5f9;
+
+  --shadow-card:    0 2px 16px rgba(0,0,0,0.12);
+  --shadow-toolbar: 0 6px 28px rgba(0,0,0,0.15);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ── Light mode Tailwind overrides ────────────────────────────────────────── */
+
+[data-theme="light"] .min-h-screen {
+  background-color: var(--bg-base);
+}
+
+/* Header */
+[data-theme="light"] header {
+  background: var(--header-bg);
+  border-color: var(--header-border);
+  backdrop-filter: blur(16px);
+}
+
+/* Text overrides */
+[data-theme="light"] .text-white  { color: #1e293b !important; }
+[data-theme="light"] .text-slate-400 { color: #64748b !important; }
+[data-theme="light"] .text-slate-500 { color: #94a3b8 !important; }
+[data-theme="light"] .text-slate-600 { color: #94a3b8 !important; }
+
+/* Background overrides */
+[data-theme="light"] .bg-white\/3  { background: rgba(255,255,255,0.9) !important; border-color: rgba(0,0,0,0.08) !important; }
+[data-theme="light"] .bg-white\/5  { background: rgba(0,0,0,0.04) !important; }
+[data-theme="light"] .bg-white\/8  { background: rgba(0,0,0,0.06) !important; }
+[data-theme="light"] .bg-white\/10 { background: rgba(0,0,0,0.06) !important; }
+
+/* Border overrides */
+[data-theme="light"] .border-white\/5  { border-color: rgba(0,0,0,0.06) !important; }
+[data-theme="light"] .border-white\/10 { border-color: rgba(0,0,0,0.10) !important; }
+[data-theme="light"] .border-white\/15 { border-color: rgba(0,0,0,0.14) !important; }
+
+/* Nav tabs */
+[data-theme="light"] nav button.text-slate-400 { color: #64748b !important; }
+[data-theme="light"] nav button.text-slate-400:hover { color: #1e293b !important; background: rgba(0,0,0,0.06) !important; }
+
+/* Brand button stays as-is (good contrast in both themes) */
+
+/* Cards / panels — generic elevated card surface */
+[data-theme="light"] .rounded-xl.border,
+[data-theme="light"] .rounded-xl.border.bg-white\/3 {
+  background: rgba(255,255,255,0.95) !important;
+  border-color: rgba(0,0,0,0.09) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+/* Inputs & textareas */
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  color: #1e293b !important;
+}
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="number"],
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="email"],
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  background: rgba(0,0,0,0.04) !important;
+  border-color: rgba(0,0,0,0.12) !important;
+}
+
+/* Tab bar bottom border */
+[data-theme="light"] .border-b.border-white\/10 {
+  border-color: rgba(0,0,0,0.10) !important;
+}
+
+/* Scrollbar */
+[data-theme="light"] ::-webkit-scrollbar { width: 5px; height: 5px; }
+[data-theme="light"] ::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+
+/* Priority badges */
+[data-theme="light"] .bg-slate-800 { background: #e2e8f0 !important; }
+[data-theme="light"] .bg-yellow-900\/40 { background: rgba(234,179,8,0.15) !important; }
+[data-theme="light"] .bg-red-900\/40 { background: rgba(239,68,68,0.12) !important; }
+[data-theme="light"] .bg-emerald-900\/10 { background: rgba(52,211,153,0.1) !important; }
+[data-theme="light"] .bg-yellow-900\/10 { background: rgba(234,179,8,0.1) !important; }
+
+/* Horizontal rule */
+[data-theme="light"] hr,
+[data-theme="light"] .border-white\/5 { border-color: rgba(0,0,0,0.07) !important; }
+
+/* sign-out / small action buttons */
+[data-theme="light"] .border-white\/10 { border-color: rgba(0,0,0,0.10) !important; }
+[data-theme="light"] .border-l.border-white\/10 { border-color: rgba(0,0,0,0.10) !important; }
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.35s ease both; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin { animation: spin 1s linear infinite; }
+
+/* ── Theme toggle button ───────────────────────────────────────────────────── */
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border-default);
+  background: var(--bg-overlay);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+  font-size: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.theme-toggle:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  transform: rotate(15deg);
+}
+.theme-toggle .icon {
+  transition: opacity 0.2s, transform 0.25s;
+  position: absolute;
+  line-height: 1;
+}
+.theme-toggle .icon-sun  { opacity: 0; transform: scale(0.5) rotate(-45deg); }
+.theme-toggle .icon-moon { opacity: 1; transform: scale(1) rotate(0deg); }
+[data-theme="light"] .theme-toggle .icon-sun  { opacity: 1; transform: scale(1) rotate(0deg); }
+[data-theme="light"] .theme-toggle .icon-moon { opacity: 0; transform: scale(0.5) rotate(45deg); }
+
+/* ── Scrollbar (dark) ─────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
