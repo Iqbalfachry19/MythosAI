@@ -12,11 +12,10 @@ import CitationTracker from "./CitationTracker.jsx";
 
 const CARD_TYPES = {
   NOTE: { label: "Note", icon: "📝", color: "#f6e05e" },
-  TEXT: { label: "Text", icon: "📄", color: "#a78bfa" },
   IMAGE: { label: "Image", icon: "🖼️", color: "#34d399" },
   LINK: { label: "Link", icon: "🔗", color: "#60a5fa" },
   TODO: { label: "To-do", icon: "✅", color: "#fb923c" },
-  SECTION: { label: "Section", icon: "📋", color: "#94a3b8" },
+  COLUMN: { label: "Column", icon: "📋", color: "#94a3b8" },
   // ── Module embeds ──
   CHARACTERS: { label: "Characters", icon: "👤", color: "#e879f9" },
   OUTLINE: { label: "Outline", icon: "📖", color: "#38bdf8" },
@@ -27,7 +26,7 @@ const CARD_TYPES = {
 };
 
 // Separate toolbar groups
-const BASIC_TYPES = ["NOTE", "TEXT", "IMAGE", "LINK", "TODO", "SECTION"];
+const BASIC_TYPES = ["NOTE", "IMAGE", "LINK", "TODO", "COLUMN"];
 const MODULE_TYPES = ["CHARACTERS", "OUTLINE", "WORLD", "LOCATIONS", "IDEAS", "CITATIONS"];
 
 const NOTE_COLORS = [
@@ -70,12 +69,11 @@ function newCard(type, pos) {
   };
   switch (type) {
     case "NOTE": return { ...base, content: "", color: NOTE_COLORS[0] };
-    case "TEXT": return { ...base, title: "", content: "" };
     case "IMAGE": return { ...base, src: "", caption: "" };
     case "LINK": return { ...base, url: "", title: "", favicon: "" };
     case "TODO": return { ...base, title: "To-do", items: [] };
-    case "SECTION": return { ...base, label: "Section", opacity: 0.06 };
-    default: return base; // module cards need no extra data
+    case "COLUMN": return { ...base, label: "Column", notes: [] };
+    default: return base;
   }
 }
 
@@ -219,14 +217,53 @@ function TodoCard({ card, onChange, onDelete }) {
   );
 }
 
-function SectionCard({ card, onChange, onDelete }) {
+function ColumnCard({ card, onChange, onDelete }) {
+  const notes = card.notes || [];
+
+  function addNote() {
+    onChange({ notes: [...notes, { id: uuidv4(), content: "", color: NOTE_COLORS[0] }] });
+  }
+  function updateNote(id, patch) {
+    onChange({ notes: notes.map((n) => (n.id === id ? { ...n, ...patch } : n)) });
+  }
+  function deleteNote(id) {
+    onChange({ notes: notes.filter((n) => n.id !== id) });
+  }
+
   return (
-    <div style={{ width: "100%", height: "100%", background: `rgba(148,163,184,${card.opacity ?? 0.06})`, border: "1.5px dashed rgba(148,163,184,0.25)", borderRadius: 14, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", flexShrink: 0 }}>
+    <div style={{ width: "100%", height: "100%", background: "rgba(148,163,184,0.05)", border: "1px solid rgba(148,163,184,0.18)", borderRadius: 14, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid rgba(148,163,184,0.12)", flexShrink: 0 }}>
         <span style={{ fontSize: 13 }}>📋</span>
-        <input value={card.label} onChange={(e) => onChange({ label: e.target.value })} placeholder="Section name…" onClick={(e) => e.stopPropagation()}
-          style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#94a3b8", fontWeight: 700, fontSize: 14, letterSpacing: 0.5, textTransform: "uppercase" }} />
+        <input value={card.label} onChange={(e) => onChange({ label: e.target.value })} placeholder="Column name…" onClick={(e) => e.stopPropagation()}
+          style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#cbd5e1", fontWeight: 700, fontSize: 13, letterSpacing: 0.3, textTransform: "uppercase" }} />
+        <span style={{ fontSize: 10, color: "#475569" }}>{notes.length}</span>
         <button onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 12 }}>✕</button>
+      </div>
+
+      <div
+        data-scrollable
+        style={{ flex: 1, overflowY: "auto", padding: "10px", display: "flex", flexDirection: "column", gap: 8 }}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {notes.map((note) => (
+          <div key={note.id} style={{ background: note.color?.bg ?? "#fef08a", borderRadius: 8, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 2 }}>
+            <div style={{ display: "flex", gap: 3, justifyContent: "flex-end" }}>
+              {NOTE_COLORS.map((c) => (
+                <button key={c.label} title={c.label} onClick={() => updateNote(note.id, { color: c })}
+                  style={{ width: 10, height: 10, borderRadius: "50%", background: c.bg, border: note.color?.label === c.label ? "2px solid rgba(0,0,0,0.4)" : "1px solid rgba(0,0,0,0.15)", cursor: "pointer", flexShrink: 0 }} />
+              ))}
+              <button onClick={() => deleteNote(note.id)} style={{ marginLeft: 4, background: "none", border: "none", color: "rgba(0,0,0,0.35)", cursor: "pointer", fontSize: 11, lineHeight: 1 }}>✕</button>
+            </div>
+            <textarea value={note.content} onChange={(e) => updateNote(note.id, { content: e.target.value })}
+              placeholder="Write something…"
+              style={{ background: "transparent", border: "none", outline: "none", resize: "none", minHeight: 50, fontSize: 12.5, color: note.color?.text ?? "#1a1a00", fontFamily: "inherit", lineHeight: 1.5 }} />
+          </div>
+        ))}
+        <button onClick={addNote}
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(148,163,184,0.3)", borderRadius: 8, padding: "8px", color: "#64748b", fontSize: 12, cursor: "pointer" }}>
+          + Add note
+        </button>
       </div>
     </div>
   );
@@ -357,11 +394,10 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
 
 
       {card.type === "NOTE" && <NoteCard card={card} onChange={onChange} onDelete={onDelete} />}
-      {card.type === "TEXT" && <TextCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "IMAGE" && <ImageCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "LINK" && <LinkCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "TODO" && <TodoCard card={card} onChange={onChange} onDelete={onDelete} />}
-      {card.type === "SECTION" && <SectionCard card={card} onChange={onChange} onDelete={onDelete} />}
+      {card.type === "COLUMN" && <ColumnCard card={card} onChange={onChange} onDelete={onDelete} />}
       {isModule && (
         <ModuleCard
           card={card}
