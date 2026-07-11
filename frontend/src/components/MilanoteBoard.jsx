@@ -287,10 +287,11 @@ function ModuleCard({ card, onDelete, onHeaderMouseDown }) {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "12px 14px" }}
+      <div
+        data-scrollable
+        style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "12px 14px" }}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
-        onWheel={(e) => e.stopPropagation()}
       >
         <Component />
       </div>
@@ -504,6 +505,7 @@ export default function MilanoteBoard() {
   }
 
   function handleWheel(e) {
+    if (e.target.closest("[data-scrollable]")) return; // biarin scroll native jalan
     e.preventDefault();
     setZoom((z) => clamp(z + (-e.deltaY * 0.001), 0.15, 3));
   }
