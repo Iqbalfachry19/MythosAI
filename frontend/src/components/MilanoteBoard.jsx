@@ -353,8 +353,7 @@ function ModuleCard({ card, onDelete, onHeaderMouseDown }) {
 
 // ── Draggable Board Card ───────────────────────────────────────────────────────
 
-function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelect, zoom, onDropIntoColumn, onDragOverColumn, dragOverColumnId }) {
-
+function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelect, zoom, onContextMenu, onDropIntoColumn, onDragOverColumn, dragOverColumnId }) {
   const dragRef = useRef({ active: false });
   const resizeRef = useRef({ active: false });
 
@@ -423,6 +422,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
       }}
       onMouseDown={handleMouseDown}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onContextMenu={onContextMenu}
     >
 
 
@@ -525,7 +525,39 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
     </div>
   );
 }
-
+function ContextMenu({ x, y, items }) {
+  return (
+    <div
+      onMouseDown={(e) => e.stopPropagation()}
+      style={{
+        position: "fixed", left: x, top: y, zIndex: 5000,
+        background: "var(--toolbar-bg)", backdropFilter: "blur(24px)",
+        border: "1px solid var(--toolbar-border)", borderRadius: 10,
+        padding: 4, minWidth: 170, boxShadow: "var(--shadow-toolbar)",
+      }}
+    >
+      {items.map((item, i) =>
+        item.divider ? (
+          <div key={i} style={{ height: 1, background: "var(--border-subtle)", margin: "4px 2px" }} />
+        ) : (
+          <button key={i} onClick={item.onClick} disabled={item.disabled}
+            style={{
+              display: "flex", alignItems: "center", gap: 8, width: "100%",
+              background: "none", border: "none", borderRadius: 7,
+              padding: "7px 10px", fontSize: 12.5, textAlign: "left",
+              color: item.danger ? "#f87171" : item.disabled ? "var(--text-faint)" : "var(--text-primary)",
+              cursor: item.disabled ? "default" : "pointer", opacity: item.disabled ? 0.4 : 1,
+            }}
+            onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.background = "var(--bg-hover)"; }}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+          >
+            <span style={{ width: 14, textAlign: "center" }}>{item.icon}</span>{item.label}
+          </button>
+        )
+      )}
+    </div>
+  );
+}
 
 
 // ── Main MilanoteBoard ────────────────────────────────────────────────────────
@@ -538,6 +570,55 @@ export default function MilanoteBoard() {
   const [boardName, setBoardName] = useSupabaseStorage("mythos_board_name", "My Story Board");
   const [editingName, setEditingName] = useState(false);
   const [dragOverColumnId, setDragOverColumnId] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, cardId?, type: "card" | "canvas" }
+  const [clipboard, setClipboard] = useState(null);      // { data, cut }
+  function openCardMenu(e, cardId) {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedId(cardId);
+    setContextMenu({ x: e.clientX, y: e.clientY, cardId, type: "card" });
+  }
+
+  function openCanvasMenu(e) {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, type: "canvas" });
+  }
+
+  function copyCardToClipboard(id, cut) {
+    const card = cards.find((c) => c.id === id);
+    if (!card) return;
+    const { id: _id, zIndex: _z, createdAt: _c, ...rest } = card;
+    setClipboard({ data: rest, cut });
+    if (cut) deleteCard(id);
+    setContextMenu(null);
+  }
+
+  function duplicateCardById(id) {
+    const card = cards.find((c) => c.id === id);
+    if (!card) return;
+    const clone = { ...card, id: uuidv4(), x: card.x + 30, y: card.y + 30, zIndex: Date.now() };
+    setCards((arr) => [...arr, clone]);
+    setSelectedId(clone.id);
+    setContextMenu(null);
+  }
+
+  function deleteCardById(id) {
+    deleteCard(id);
+    setContextMenu(null);
+  }
+
+  function pasteClipboard(screenX, screenY) {
+    if (!clipboard) return;
+    const rect = canvasRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
+    const worldX = (screenX - rect.left - pan.x) / zoom;
+    const worldY = (screenY - rect.top - pan.y) / zoom;
+    const size = DEFAULT_SIZES[clipboard.data.type] ?? { w: clipboard.data.w, h: clipboard.data.h };
+    const newCard = { ...clipboard.data, id: uuidv4(), x: worldX - size.w / 2, y: worldY - size.h / 2, zIndex: Date.now(), createdAt: new Date().toISOString() };
+    setCards((arr) => [...arr, newCard]);
+    setSelectedId(newCard.id);
+    if (clipboard.cut) setClipboard(null); // paste sekali abis cut
+    setContextMenu(null);
+  }
 
   function moveCardIntoColumn(cardId, columnId) {
     if (cardId === columnId) return;
@@ -554,7 +635,17 @@ export default function MilanoteBoard() {
   }
   const canvasRef = useRef(null);
   const panRef = useRef({ active: false });
-
+  useEffect(() => {
+    if (!contextMenu) return;
+    function handleClick() { setContextMenu(null); }
+    function handleKey(e) { if (e.key === "Escape") setContextMenu(null); }
+    window.addEventListener("mousedown", handleClick);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [contextMenu]);
   function handleCanvasMouseDown(e) {
     if (e.button !== 0) return;
     // Only pan when clicking the canvas background itself
@@ -682,6 +773,7 @@ export default function MilanoteBoard() {
               onBringToFront={() => bringToFront(card.id)}
               onChange={(patch) => updateCard(card.id, patch)}
               onDelete={() => deleteCard(card.id)}
+              onContextMenu={(e) => openCardMenu(e, card.id)}
               onDropIntoColumn={(columnId) => moveCardIntoColumn(card.id, columnId)}
               onDragOverColumn={setDragOverColumnId}
               dragOverColumnId={dragOverColumnId}
@@ -700,6 +792,26 @@ export default function MilanoteBoard() {
 
 
         <Toolbar onAdd={addCard} zoom={zoom} onZoom={handleZoom} onFitAll={fitAll} cardCount={cards.length} />
+        {contextMenu?.type === "card" && (
+          <ContextMenu
+            x={contextMenu.x} y={contextMenu.y}
+            items={[
+              { icon: "📋", label: "Copy", onClick: () => copyCardToClipboard(contextMenu.cardId, false) },
+              { icon: "✂️", label: "Cut", onClick: () => copyCardToClipboard(contextMenu.cardId, true) },
+              { icon: "🧬", label: "Duplicate", onClick: () => duplicateCardById(contextMenu.cardId) },
+              { divider: true },
+              { icon: "🗑️", label: "Delete", danger: true, onClick: () => deleteCardById(contextMenu.cardId) },
+            ]}
+          />
+        )}
+        {contextMenu?.type === "canvas" && (
+          <ContextMenu
+            x={contextMenu.x} y={contextMenu.y}
+            items={[
+              { icon: "📌", label: "Paste", disabled: !clipboard, onClick: () => pasteClipboard(contextMenu.x, contextMenu.y) },
+            ]}
+          />
+        )}
       </div>
     </div>
   );
