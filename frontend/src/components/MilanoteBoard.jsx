@@ -1,12 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useSupabaseStorage } from "../hooks/useSupabaseStorage.js";
 import { v4 as uuidv4 } from "uuid";
-import CharacterManager from "./CharacterManager.jsx";
-import OutlineBoard from "./OutlineBoard.jsx";
-import WorldbuildingPanel from "./WorldbuildingPanel.jsx";
-import LocationManager from "./LocationManager.jsx";
-import BraindumpBoard from "./BraindumpBoard.jsx";
-import CitationTracker from "./CitationTracker.jsx";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -16,7 +10,7 @@ const CARD_TYPES = {
   LINK: { label: "Link", icon: "🔗", color: "#60a5fa" },
   TODO: { label: "To-do", icon: "✅", color: "#fb923c" },
   COLUMN: { label: "Column", icon: "📋", color: "#94a3b8" },
-  // ── Module openers ──
+  // ── Nested-board opener tiles ──
   CHARACTERS: { label: "Characters", icon: "👤", color: "#e879f9" },
   OUTLINE: { label: "Outline", icon: "📖", color: "#38bdf8" },
   WORLD: { label: "Worldbuilding", icon: "🌍", color: "#4ade80" },
@@ -53,6 +47,16 @@ const DEFAULT_SIZES = {
   CITATIONS: { w: 480, h: 520 },
 };
 
+// Meta for the nested-board opener tiles (no external component — just label/icon/accent)
+const MODULE_META = {
+  CHARACTERS: { label: "Characters", icon: "👤", accent: "#e879f9" },
+  OUTLINE: { label: "Outline", icon: "📖", accent: "#38bdf8" },
+  WORLD: { label: "Worldbuilding", icon: "🌍", accent: "#4ade80" },
+  LOCATIONS: { label: "Locations", icon: "📍", accent: "#f97316" },
+  IDEAS: { label: "Ideas & Goals", icon: "💡", accent: "#facc15" },
+  CITATIONS: { label: "Citations", icon: "📚", accent: "#a78bfa" },
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
@@ -72,7 +76,9 @@ function newCard(type, pos) {
     case "LINK": return { ...base, url: "", title: "", favicon: "" };
     case "TODO": return { ...base, title: "To-do", items: [] };
     case "COLUMN": return { ...base, label: "Column", items: [] };
-    default: return { ...base, label: MODULE_META[type]?.label ?? type }; // module opener cards get an editable label
+    default:
+      // Nested-board opener tile: starts with its own empty board
+      return { ...base, label: MODULE_META[type]?.label ?? type, boardCards: [], boardConnections: [] };
   }
 }
 
@@ -270,22 +276,14 @@ function ColumnCard({ card, onChange, onDelete, isDragTarget }) {
   );
 }
 
-// ── Module Opener Card (static tile — double-click opens full board) ─────────
-
-const MODULE_META = {
-  CHARACTERS: { label: "Characters", icon: "👤", accent: "#e879f9", Component: CharacterManager },
-  OUTLINE: { label: "Outline", icon: "📖", accent: "#38bdf8", Component: OutlineBoard },
-  WORLD: { label: "Worldbuilding", icon: "🌍", accent: "#4ade80", Component: WorldbuildingPanel },
-  LOCATIONS: { label: "Locations", icon: "📍", accent: "#f97316", Component: LocationManager },
-  IDEAS: { label: "Ideas & Goals", icon: "💡", accent: "#facc15", Component: BraindumpBoard },
-  CITATIONS: { label: "Citations", icon: "📚", accent: "#a78bfa", Component: CitationTracker },
-};
+// ── Nested-board Opener Card (static tile — double-click opens its own empty board) ──
 
 function ModuleCard({ card, onChange, onDelete }) {
   const meta = MODULE_META[card.type];
   if (!meta) return null;
   const { icon, accent } = meta;
   const displayLabel = card.label ?? meta.label;
+  const count = (card.boardCards || []).length;
 
   return (
     <div style={{
@@ -326,9 +324,10 @@ function ModuleCard({ card, onChange, onDelete }) {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20, textAlign: "center" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: 20, textAlign: "center" }}>
         <span style={{ fontSize: 40, opacity: 0.5 }}>{icon}</span>
         <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Double-click untuk buka board {displayLabel}</span>
+        {count > 0 && <span style={{ fontSize: 10.5, color: "#475569" }}>{count} card di dalam</span>}
       </div>
     </div>
   );
@@ -363,7 +362,6 @@ function ConnectionsLayer({ cards, connections, zoom, pendingLine, editingConnId
         return (
           <g key={conn.id}>
             <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#818cf8" strokeWidth={2 / zoom} markerEnd="url(#arrowhead)" />
-            {/* thicker invisible hitbox for click / right-click */}
             <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="transparent" strokeWidth={14 / zoom}
               style={{ pointerEvents: "stroke", cursor: "pointer" }}
               onClick={(e) => { e.stopPropagation(); setEditingConnId(conn.id); }}
@@ -508,7 +506,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
       }}
       onMouseDown={handleMouseDown}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      onDoubleClick={(e) => { if (isModule) { e.stopPropagation(); onOpenModule?.(card.type, card.id); } }}
+      onDoubleClick={(e) => { if (isModule && onOpenModule) { e.stopPropagation(); onOpenModule(card.type, card.id); } }}
       onContextMenu={onContextMenu}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -547,7 +545,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
-function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
+function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount, showModuleTypes }) {
   return (
     <div style={{
       position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)",
@@ -574,27 +572,27 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
         })}
       </div>
 
-      {/* Divider */}
-      <div style={{ width: 1, height: 32, background: "var(--border-subtle)", margin: "0 8px", flexShrink: 0 }} />
+      {showModuleTypes && (
+        <>
+          <div style={{ width: 1, height: 32, background: "var(--border-subtle)", margin: "0 8px", flexShrink: 0 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {MODULE_TYPES.map((key) => {
+              const def = CARD_TYPES[key];
+              const meta = MODULE_META[key];
+              return (
+                <button key={key} onClick={() => onAdd(key)} title={`Add ${def.label}`}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, background: "none", border: "none", cursor: "pointer", padding: "5px 8px", borderRadius: 9, transition: "background 0.12s" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = `${meta.accent}15`; }}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "none"}>
+                  <span style={{ fontSize: 16 }}>{def.icon}</span>
+                  <span style={{ fontSize: 9, color: meta.accent, letterSpacing: 0.3, textTransform: "uppercase", opacity: 0.85 }}>{def.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
-      {/* Module opener types */}
-      <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-        {MODULE_TYPES.map((key) => {
-          const def = CARD_TYPES[key];
-          const meta = MODULE_META[key];
-          return (
-            <button key={key} onClick={() => onAdd(key)} title={`Add ${def.label}`}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, background: "none", border: "none", cursor: "pointer", padding: "5px 8px", borderRadius: 9, transition: "background 0.12s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = `${meta.accent}15`; }}
-              onMouseLeave={(e) => e.currentTarget.style.background = "none"}>
-              <span style={{ fontSize: 16 }}>{def.icon}</span>
-              <span style={{ fontSize: 9, color: meta.accent, letterSpacing: 0.3, textTransform: "uppercase", opacity: 0.85 }}>{def.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Divider */}
       <div style={{ width: 1, height: 32, background: "var(--border-subtle)", margin: "0 8px", flexShrink: 0 }} />
 
       {/* Zoom */}
@@ -610,34 +608,46 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
   );
 }
 
+// ── Mini-map ──────────────────────────────────────────────────────────────────
 
+function MiniMap({ cards }) {
+  if (cards.length === 0) return null;
+  const W = 150, H = 90;
+  const minX = Math.min(...cards.map((c) => c.x));
+  const minY = Math.min(...cards.map((c) => c.y));
+  const maxX = Math.max(...cards.map((c) => c.x + c.w));
+  const maxY = Math.max(...cards.map((c) => c.y + c.h));
+  const rangeX = maxX - minX || 800, rangeY = maxY - minY || 600;
+  const s = Math.min(W / rangeX, H / rangeY, 0.24);
+  return (
+    <div style={{ position: "absolute", top: 14, right: 14, width: W, height: H, background: "var(--minimap-bg)", border: "1px solid var(--minimap-border)", borderRadius: 8, overflow: "hidden", zIndex: 900, backdropFilter: "blur(10px)", transition: "background 0.3s" }}>
+      {cards.map((c) => (
+        <div key={c.id} style={{ position: "absolute", left: (c.x - minX) * s, top: (c.y - minY) * s, width: Math.max(4, c.w * s), height: Math.max(3, c.h * s), background: CARD_TYPES[c.type]?.color ?? "#94a3b8", borderRadius: 2, opacity: 0.75 }} />
+      ))}
+    </div>
+  );
+}
 
+// ── BoardCanvas ────────────────────────────────────────────────────────────────
+// Self-contained canvas: owns its own pan/zoom/selection/context-menu/clipboard
+// state, and operates on whatever `cards`/`connections` + setters it's given.
+// Used both for the top-level board and for each nested module board.
 
-// ── Main MilanoteBoard ────────────────────────────────────────────────────────
-
-export default function MilanoteBoard() {
-  const [cards, setCards] = useSupabaseStorage("mythos_milanote_cards", []);
-  const [connections, setConnections] = useSupabaseStorage("mythos_milanote_connections", []);
+function BoardCanvas({ cards, setCards, connections, setConnections, showModuleTypes, onOpenModule, hidden, emptyHint }) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [selectedId, setSelectedId] = useState(null);
-  const [boardName, setBoardName] = useSupabaseStorage("mythos_board_name", "My Story Board");
-  const [editingName, setEditingName] = useState(false);
 
   const [dragOverColumnId, setDragOverColumnId] = useState(null);
-  const [pendingConnection, setPendingConnection] = useState(null); // { fromId, x2, y2 } world coords
+  const [pendingConnection, setPendingConnection] = useState(null);
   const [editingConnId, setEditingConnId] = useState(null);
 
-  const [contextMenu, setContextMenu] = useState(null); // { x, y, cardId?, type: "card" | "canvas" }
-  const [clipboard, setClipboard] = useState(null);      // { data, cut }
-
-  const [openModuleType, setOpenModuleType] = useState(null); // null = on the board, else module key
-  const [openModuleCardId, setOpenModuleCardId] = useState(null); // which card instance is open (for its custom label)
+  const [contextMenu, setContextMenu] = useState(null);
+  const [clipboard, setClipboard] = useState(null);
 
   const canvasRef = useRef(null);
   const panRef = useRef({ active: false });
 
-  // ── Canvas pan (drag background) ──
   function handleCanvasMouseDown(e) {
     if (e.button !== 0) return;
     const target = e.target;
@@ -654,9 +664,8 @@ export default function MilanoteBoard() {
     window.addEventListener("mouseup", onUp);
   }
 
-  // ── Wheel: plain scroll = pan, pinch / ctrl+scroll = zoom ──
   function handleWheel(e) {
-    if (e.target.closest("[data-scrollable]")) return; // let native scroll happen inside cards
+    if (e.target.closest("[data-scrollable]")) return;
     e.preventDefault();
     const isPinch = e.ctrlKey || e.metaKey;
     if (isPinch) {
@@ -673,7 +682,6 @@ export default function MilanoteBoard() {
     return () => el.removeEventListener("wheel", handleWheel);
   }, []);
 
-  // ── Close context menu on outside click / Escape ──
   useEffect(() => {
     if (!contextMenu) return;
     function handleClick() { setContextMenu(null); }
@@ -691,7 +699,6 @@ export default function MilanoteBoard() {
     return { x: (clientX - rect.left - pan.x) / zoom, y: (clientY - rect.top - pan.y) / zoom };
   }
 
-  // ── Card CRUD ──
   function addCard(type) {
     const rect = canvasRef.current?.getBoundingClientRect() ?? { width: 900, height: 600 };
     const jitter = () => (Math.random() - 0.5) * 100;
@@ -732,7 +739,6 @@ export default function MilanoteBoard() {
     setPan({ x: rect.width / 2 - ((minX + maxX) / 2) * nz, y: rect.height / 2 - ((minY + maxY) / 2) * nz });
   }
 
-  // ── Drop Note/To-do into Column ──
   function moveCardIntoColumn(cardId, columnId) {
     if (cardId === columnId) return;
     setCards((arr) => {
@@ -748,7 +754,6 @@ export default function MilanoteBoard() {
     setSelectedId(null);
   }
 
-  // ── Connections (line + text relation) ──
   function startConnection(fromId, e) {
     e.preventDefault(); e.stopPropagation();
     const start = worldPointFromScreen(e.clientX, e.clientY);
@@ -776,7 +781,6 @@ export default function MilanoteBoard() {
   function updateConnectionLabel(id, label) { setConnections((arr) => arr.map((c) => c.id === id ? { ...c, label } : c)); }
   function deleteConnection(id) { setConnections((arr) => arr.filter((c) => c.id !== id)); }
 
-  // ── Context menu actions ──
   function openCardMenu(e, cardId) {
     e.preventDefault();
     e.stopPropagation();
@@ -825,10 +829,6 @@ export default function MilanoteBoard() {
     setContextMenu(null);
   }
 
-  // ── Module navigation ──
-  function openModule(type, cardId) { setOpenModuleType(type); setOpenModuleCardId(cardId); setSelectedId(null); setContextMenu(null); }
-  function closeModule() { setOpenModuleType(null); setOpenModuleCardId(null); }
-
   const sorted = [...cards].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
 
   const pendingLine = pendingConnection ? (() => {
@@ -836,6 +836,133 @@ export default function MilanoteBoard() {
     if (!fromCard) return null;
     return { x1: fromCard.x + fromCard.w / 2, y1: fromCard.y + fromCard.h / 2, x2: pendingConnection.x2, y2: pendingConnection.y2 };
   })() : null;
+
+  return (
+    <div
+      ref={canvasRef}
+      onMouseDown={handleCanvasMouseDown}
+      onContextMenu={openCanvasMenu}
+      style={{
+        position: "absolute", inset: 0, overflow: "hidden",
+        borderRadius: 16, border: "1px solid var(--border-subtle)",
+        cursor: "default",
+        transition: "border-color 0.3s",
+        display: hidden ? "none" : "block",
+      }}
+    >
+      <div className="board-bg" style={{
+        position: "absolute", inset: 0, zIndex: 0,
+        background: "var(--canvas-bg)",
+        backgroundImage: `
+          radial-gradient(ellipse at 25% 35%, var(--canvas-glow1) 0%, transparent 55%),
+          radial-gradient(ellipse at 75% 65%, var(--canvas-glow2) 0%, transparent 55%),
+          repeating-linear-gradient(var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px),
+          repeating-linear-gradient(90deg, var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px)
+        `,
+        transition: "background 0.3s",
+      }} />
+
+      <div style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", position: "absolute", width: 0, height: 0, zIndex: 1 }}>
+        <ConnectionsLayer
+          cards={cards}
+          connections={connections}
+          zoom={zoom}
+          editingConnId={editingConnId}
+          setEditingConnId={setEditingConnId}
+          onUpdateLabel={updateConnectionLabel}
+          onDeleteConnection={deleteConnection}
+          pendingLine={pendingLine}
+        />
+
+        {sorted.map((card) => (
+          <BoardCard
+            key={card.id} card={card} zoom={zoom}
+            selected={selectedId === card.id}
+            onSelect={() => setSelectedId(card.id)}
+            onBringToFront={() => bringToFront(card.id)}
+            onChange={(patch) => updateCard(card.id, patch)}
+            onDelete={() => deleteCard(card.id)}
+            onContextMenu={(e) => openCardMenu(e, card.id)}
+            onStartConnection={startConnection}
+            onOpenModule={onOpenModule}
+            onDropIntoColumn={(columnId) => moveCardIntoColumn(card.id, columnId)}
+            onDragOverColumn={setDragOverColumnId}
+            dragOverColumnId={dragOverColumnId}
+          />
+        ))}
+      </div>
+
+      {cards.length === 0 && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 2 }}>
+          <div style={{ fontSize: 44, marginBottom: 14, opacity: 0.12 }}>🎨</div>
+          <p style={{ color: "var(--text-muted)", fontSize: 15, fontWeight: 600 }}>Board is empty</p>
+          <p style={{ color: "var(--text-faint)", fontSize: 12, marginTop: 6 }}>{emptyHint}</p>
+        </div>
+      )}
+
+      <MiniMap cards={cards} />
+      <Toolbar onAdd={addCard} zoom={zoom} onZoom={handleZoom} onFitAll={fitAll} cardCount={cards.length} showModuleTypes={showModuleTypes} />
+
+      {contextMenu?.type === "card" && (
+        <ContextMenu
+          x={contextMenu.x} y={contextMenu.y}
+          items={[
+            { icon: "📋", label: "Copy", onClick: () => copyCardToClipboard(contextMenu.cardId, false) },
+            { icon: "✂️", label: "Cut", onClick: () => copyCardToClipboard(contextMenu.cardId, true) },
+            { icon: "🧬", label: "Duplicate", onClick: () => duplicateCardById(contextMenu.cardId) },
+            { divider: true },
+            { icon: "🗑️", label: "Delete", danger: true, onClick: () => deleteCardById(contextMenu.cardId) },
+          ]}
+        />
+      )}
+      {contextMenu?.type === "canvas" && (
+        <ContextMenu
+          x={contextMenu.x} y={contextMenu.y}
+          items={[
+            { icon: "📌", label: "Paste", disabled: !clipboard, onClick: () => pasteClipboard(contextMenu.x, contextMenu.y) },
+          ]}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Main MilanoteBoard ────────────────────────────────────────────────────────
+
+export default function MilanoteBoard() {
+  const [cards, setCards] = useSupabaseStorage("mythos_milanote_cards", []);
+  const [connections, setConnections] = useSupabaseStorage("mythos_milanote_connections", []);
+  const [boardName, setBoardName] = useSupabaseStorage("mythos_board_name", "My Story Board");
+  const [editingName, setEditingName] = useState(false);
+
+  const [openModuleType, setOpenModuleType] = useState(null);   // null = on the top board, else module key
+  const [openModuleCardId, setOpenModuleCardId] = useState(null); // which tile's nested board is open
+
+  function openModule(type, cardId) { setOpenModuleType(type); setOpenModuleCardId(cardId); setEditingName(false); }
+  function closeModule() { setOpenModuleType(null); setOpenModuleCardId(null); }
+
+  // Wrappers so a nested board can be given cards/setCards just like the top-level one,
+  // but reading/writing from the opened tile's own boardCards / boardConnections fields.
+  function nestedSetCards(updater) {
+    setCards((arr) => arr.map((c) => {
+      if (c.id !== openModuleCardId) return c;
+      const current = c.boardCards || [];
+      const next = typeof updater === "function" ? updater(current) : updater;
+      return { ...c, boardCards: next };
+    }));
+  }
+  function nestedSetConnections(updater) {
+    setCards((arr) => arr.map((c) => {
+      if (c.id !== openModuleCardId) return c;
+      const current = c.boardConnections || [];
+      const next = typeof updater === "function" ? updater(current) : updater;
+      return { ...c, boardConnections: next };
+    }));
+  }
+
+  const openCard = cards.find((c) => c.id === openModuleCardId);
+  const nestedCards = openCard?.boardCards || [];
+  const nestedConnections = openCard?.boardConnections || [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 108px)", minHeight: 540, position: "relative" }}>
@@ -866,121 +993,43 @@ export default function MilanoteBoard() {
               <span style={{ opacity: 0.3, fontSize: 18 }}>›</span>
               <span style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
                 <span>{MODULE_META[openModuleType].icon}</span>
-                {(cards.find((c) => c.id === openModuleCardId)?.label) ?? MODULE_META[openModuleType].label}
+                {openCard?.label ?? MODULE_META[openModuleType].label}
               </span>
             </>
           )}
         </div>
 
         <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-faint)" }}>
-          {openModuleType ? "Klik nama board untuk kembali" : "Scroll or drag to pan · Pinch to zoom · Double-click module card untuk buka board"}
+          {openModuleType ? "Klik nama board untuk kembali" : "Scroll or drag to pan · Pinch to zoom · Double-click sebuah tile untuk buka board-nya"}
         </span>
       </div>
 
       <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
-        {/* Canvas — stays mounted (hidden, not unmounted) so pan/zoom state survives module navigation */}
-        <div
-          ref={canvasRef}
-          onMouseDown={handleCanvasMouseDown}
-          onContextMenu={openCanvasMenu}
-          style={{
-            position: "absolute", inset: 0, overflow: "hidden",
-            borderRadius: 16, border: "1px solid var(--border-subtle)",
-            cursor: "default",
-            transition: "border-color 0.3s",
-            display: openModuleType ? "none" : "block",
-          }}
-        >
-          {/* Grid background layer — marked so mousedown can detect it */}
-          <div className="board-bg" style={{
-            position: "absolute", inset: 0, zIndex: 0,
-            background: "var(--canvas-bg)",
-            backgroundImage: `
-              radial-gradient(ellipse at 25% 35%, var(--canvas-glow1) 0%, transparent 55%),
-              radial-gradient(ellipse at 75% 65%, var(--canvas-glow2) 0%, transparent 55%),
-              repeating-linear-gradient(var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px),
-              repeating-linear-gradient(90deg, var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px)
-            `,
-            transition: "background 0.3s",
-          }} />
+        {/* Top-level board — stays mounted (hidden) so its pan/zoom/state survive navigation */}
+        <BoardCanvas
+          cards={cards}
+          setCards={setCards}
+          connections={connections}
+          setConnections={setConnections}
+          showModuleTypes={true}
+          onOpenModule={openModule}
+          hidden={!!openModuleType}
+          emptyHint="Use the toolbar below — add notes, columns, or a Characters/Outline/etc. tile"
+        />
 
-          {/* Transformed canvas world */}
-          <div style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", position: "absolute", width: 0, height: 0, zIndex: 1 }}>
-            <ConnectionsLayer
-              cards={cards}
-              connections={connections}
-              zoom={zoom}
-              editingConnId={editingConnId}
-              setEditingConnId={setEditingConnId}
-              onUpdateLabel={updateConnectionLabel}
-              onDeleteConnection={deleteConnection}
-              pendingLine={pendingLine}
-            />
-
-            {sorted.map((card) => (
-              <BoardCard
-                key={card.id} card={card} zoom={zoom}
-                selected={selectedId === card.id}
-                onSelect={() => setSelectedId(card.id)}
-                onBringToFront={() => bringToFront(card.id)}
-                onChange={(patch) => updateCard(card.id, patch)}
-                onDelete={() => deleteCard(card.id)}
-                onContextMenu={(e) => openCardMenu(e, card.id)}
-                onStartConnection={startConnection}
-                onOpenModule={openModule}
-                onDropIntoColumn={(columnId) => moveCardIntoColumn(card.id, columnId)}
-                onDragOverColumn={setDragOverColumnId}
-                dragOverColumnId={dragOverColumnId}
-              />
-            ))}
-          </div>
-
-          {/* Empty state */}
-          {cards.length === 0 && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 2 }}>
-              <div style={{ fontSize: 44, marginBottom: 14, opacity: 0.12 }}>🎨</div>
-              <p style={{ color: "var(--text-muted)", fontSize: 15, fontWeight: 600 }}>Board is empty</p>
-              <p style={{ color: "var(--text-faint)", fontSize: 12, marginTop: 6 }}>Use the toolbar below — add notes, columns, or open Characters, Outline, and more</p>
-            </div>
-          )}
-
-
-          <Toolbar onAdd={addCard} zoom={zoom} onZoom={handleZoom} onFitAll={fitAll} cardCount={cards.length} />
-
-          {contextMenu?.type === "card" && (
-            <ContextMenu
-              x={contextMenu.x} y={contextMenu.y}
-              items={[
-                { icon: "📋", label: "Copy", onClick: () => copyCardToClipboard(contextMenu.cardId, false) },
-                { icon: "✂️", label: "Cut", onClick: () => copyCardToClipboard(contextMenu.cardId, true) },
-                { icon: "🧬", label: "Duplicate", onClick: () => duplicateCardById(contextMenu.cardId) },
-                { divider: true },
-                { icon: "🗑️", label: "Delete", danger: true, onClick: () => deleteCardById(contextMenu.cardId) },
-              ]}
-            />
-          )}
-          {contextMenu?.type === "canvas" && (
-            <ContextMenu
-              x={contextMenu.x} y={contextMenu.y}
-              items={[
-                { icon: "📌", label: "Paste", disabled: !clipboard, onClick: () => pasteClipboard(contextMenu.x, contextMenu.y) },
-              ]}
-            />
-          )}
-        </div>
-
-        {/* Module board — shown in place of canvas when a module is opened */}
+        {/* Nested board for whichever tile is open — starts empty, fills up as the user adds cards */}
         {openModuleType && (
-          <div style={{
-            position: "absolute", inset: 0, overflowY: "auto",
-            borderRadius: 16, border: "1px solid var(--border-subtle)",
-            padding: 20, background: "var(--bg-surface)",
-          }}>
-            {(() => {
-              const Comp = MODULE_META[openModuleType].Component;
-              return <Comp />;
-            })()}
-          </div>
+          <BoardCanvas
+            key={openModuleCardId}
+            cards={nestedCards}
+            setCards={nestedSetCards}
+            connections={nestedConnections}
+            setConnections={nestedSetConnections}
+            showModuleTypes={false}
+            onOpenModule={undefined}
+            hidden={false}
+            emptyHint="Board ini masih kosong — mulai tambahkan card dari toolbar di bawah"
+          />
         )}
       </div>
     </div>
