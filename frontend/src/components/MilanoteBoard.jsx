@@ -16,7 +16,7 @@ const CARD_TYPES = {
   LINK: { label: "Link", icon: "🔗", color: "#60a5fa" },
   TODO: { label: "To-do", icon: "✅", color: "#fb923c" },
   COLUMN: { label: "Column", icon: "📋", color: "#94a3b8" },
-  // ── Module embeds ──
+  // ── Module openers ──
   CHARACTERS: { label: "Characters", icon: "👤", color: "#e879f9" },
   OUTLINE: { label: "Outline", icon: "📖", color: "#38bdf8" },
   WORLD: { label: "Worldbuilding", icon: "🌍", color: "#4ade80" },
@@ -41,11 +41,10 @@ const NOTE_COLORS = [
 
 const DEFAULT_SIZES = {
   NOTE: { w: 220, h: 190 },
-  TEXT: { w: 300, h: 200 },
   IMAGE: { w: 280, h: 240 },
   LINK: { w: 260, h: 110 },
   TODO: { w: 260, h: 210 },
-  SECTION: { w: 420, h: 300 },
+  COLUMN: { w: 280, h: 420 },
   CHARACTERS: { w: 480, h: 520 },
   OUTLINE: { w: 520, h: 560 },
   WORLD: { w: 500, h: 540 },
@@ -73,7 +72,7 @@ function newCard(type, pos) {
     case "LINK": return { ...base, url: "", title: "", favicon: "" };
     case "TODO": return { ...base, title: "To-do", items: [] };
     case "COLUMN": return { ...base, label: "Column", items: [] };
-    default: return base;
+    default: return base; // module opener cards need no extra data
   }
 }
 
@@ -92,21 +91,6 @@ function NoteCard({ card, onChange, onDelete }) {
       <textarea value={card.content} onChange={(e) => onChange({ content: e.target.value })}
         placeholder="Write something…" onClick={(e) => e.stopPropagation()}
         style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", padding: "8px 10px", fontSize: 13, color: card.color?.text ?? "#1a1a00", fontFamily: "inherit", lineHeight: 1.6 }} />
-    </div>
-  );
-}
-
-function TextCard({ card, onChange, onDelete }) {
-  return (
-    <div style={{ width: "100%", height: "100%", background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.25)", borderRadius: 10, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderBottom: "1px solid rgba(139,92,246,0.15)", flexShrink: 0 }}>
-        <span style={{ fontSize: 13 }}>📄</span>
-        <input value={card.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="Title…" onClick={(e) => e.stopPropagation()}
-          style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#e2e8f0", fontWeight: 600, fontSize: 13 }} />
-        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 12 }}>✕</button>
-      </div>
-      <textarea value={card.content} onChange={(e) => onChange({ content: e.target.value })} placeholder="Write your note…" onClick={(e) => e.stopPropagation()}
-        style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", padding: "8px 10px", fontSize: 12.5, color: "#cbd5e1", fontFamily: "inherit", lineHeight: 1.65 }} />
     </div>
   );
 }
@@ -197,7 +181,7 @@ function TodoCard({ card, onChange, onDelete }) {
         {total > 0 && <span style={{ fontSize: 10, color: "#fb923c", background: "rgba(251,146,60,0.15)", padding: "1px 6px", borderRadius: 10 }}>{done}/{total}</span>}
         <button onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 12 }}>✕</button>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "6px 10px" }} onClick={(e) => e.stopPropagation()}>
+      <div data-scrollable style={{ flex: 1, overflowY: "auto", padding: "6px 10px" }} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
         {(card.items || []).map((item) => (
           <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
             <input type="checkbox" checked={item.done} onChange={() => toggleItem(item.id)} style={{ cursor: "pointer", accentColor: "#fb923c", width: 14, height: 14 }} />
@@ -217,14 +201,16 @@ function TodoCard({ card, onChange, onDelete }) {
   );
 }
 
+// ── Column Card (holds Note / To-do items, natural drag-and-drop-in) ──────────
+
 function ColumnCard({ card, onChange, onDelete, isDragTarget }) {
   const items = card.items || [];
 
   function addItem(type) {
-    const newItem = type === "NOTE"
+    const item = type === "NOTE"
       ? { id: uuidv4(), type: "NOTE", content: "", color: NOTE_COLORS[0] }
       : { id: uuidv4(), type: "TODO", title: "To-do", items: [] };
-    onChange({ items: [...items, newItem] });
+    onChange({ items: [...items, item] });
   }
   function updateItem(id, patch) {
     onChange({ items: items.map((it) => (it.id === id ? { ...it, ...patch } : it)) });
@@ -284,7 +270,7 @@ function ColumnCard({ card, onChange, onDelete, isDragTarget }) {
   );
 }
 
-// ── Module Embed Card ─────────────────────────────────────────────────────────
+// ── Module Opener Card (static tile — double-click opens full board) ─────────
 
 const MODULE_META = {
   CHARACTERS: { label: "Characters", icon: "👤", accent: "#e879f9", Component: CharacterManager },
@@ -295,10 +281,10 @@ const MODULE_META = {
   CITATIONS: { label: "Citations", icon: "📚", accent: "#a78bfa", Component: CitationTracker },
 };
 
-function ModuleCard({ card, onDelete, onHeaderMouseDown }) {
+function ModuleCard({ card, onDelete }) {
   const meta = MODULE_META[card.type];
   if (!meta) return null;
-  const { label, icon, accent, Component } = meta;
+  const { label, icon, accent } = meta;
 
   return (
     <div style={{
@@ -311,26 +297,20 @@ function ModuleCard({ card, onDelete, onHeaderMouseDown }) {
       backdropFilter: "blur(12px)",
       transition: "background 0.3s",
     }}>
-      {/* Module header bar */}
-      <div
-        onMouseDown={onHeaderMouseDown}
-        style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "8px 14px",
-          background: `linear-gradient(90deg, ${accent}18 0%, transparent 100%)`,
-          borderBottom: `1px solid ${accent}20`,
-          flexShrink: 0,
-          cursor: "grab",
-        }}
-      >
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "8px 14px",
+        background: `linear-gradient(90deg, ${accent}18 0%, transparent 100%)`,
+        borderBottom: `1px solid ${accent}20`,
+        flexShrink: 0,
+      }}>
         <span style={{ fontSize: 16 }}>{icon}</span>
         <span style={{ color: accent, fontWeight: 700, fontSize: 13, letterSpacing: 0.3 }}>{label}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
           <span style={{ fontSize: 10, color: "#334155", background: "rgba(255,255,255,0.04)", padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)" }}>
-            embedded
+            board
           </span>
           <button
-            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 12, padding: "2px 4px", borderRadius: 4, lineHeight: 1 }}
             onMouseEnter={(e) => e.currentTarget.style.color = "#ef4444"}
@@ -339,24 +319,123 @@ function ModuleCard({ card, onDelete, onHeaderMouseDown }) {
         </div>
       </div>
 
-      <div
-        data-scrollable
-        style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "12px 14px" }}
-        onClick={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <Component />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20, textAlign: "center" }}>
+        <span style={{ fontSize: 40, opacity: 0.5 }}>{icon}</span>
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Double-click untuk buka board {label}</span>
       </div>
+    </div>
+  );
+}
+
+// ── Connections Layer (SVG lines with text labels between cards) ─────────────
+
+function ConnectionsLayer({ cards, connections, zoom, pendingLine, editingConnId, setEditingConnId, onUpdateLabel, onDeleteConnection }) {
+  function edgePoint(from, to) {
+    const cx = from.x + from.w / 2, cy = from.y + from.h / 2;
+    const dx = (to.x + to.w / 2) - cx, dy = (to.y + to.h / 2) - cy;
+    if (dx === 0 && dy === 0) return { x: cx, y: cy };
+    const scale = Math.min(from.w / 2 / Math.abs(dx || 1e-6), from.h / 2 / Math.abs(dy || 1e-6));
+    return { x: cx + dx * scale, y: cy + dy * scale };
+  }
+
+  return (
+    <svg style={{ position: "absolute", left: 0, top: 0, width: 1, height: 1, overflow: "visible", pointerEvents: "none" }}>
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#818cf8" />
+        </marker>
+      </defs>
+
+      {connections.map((conn) => {
+        const fromCard = cards.find((c) => c.id === conn.fromId);
+        const toCard = cards.find((c) => c.id === conn.toId);
+        if (!fromCard || !toCard) return null;
+        const p1 = edgePoint(fromCard, toCard);
+        const p2 = edgePoint(toCard, fromCard);
+        const midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
+        return (
+          <g key={conn.id}>
+            <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#818cf8" strokeWidth={2 / zoom} markerEnd="url(#arrowhead)" />
+            {/* thicker invisible hitbox for click / right-click */}
+            <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="transparent" strokeWidth={14 / zoom}
+              style={{ pointerEvents: "stroke", cursor: "pointer" }}
+              onClick={(e) => { e.stopPropagation(); setEditingConnId(conn.id); }}
+              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteConnection(conn.id); }}
+            />
+            <foreignObject x={midX - 60} y={midY - 14} width={120} height={28} style={{ pointerEvents: "auto" }}>
+              <div onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ display: "flex", justifyContent: "center" }}>
+                {editingConnId === conn.id ? (
+                  <input autoFocus defaultValue={conn.label}
+                    onBlur={(e) => { onUpdateLabel(conn.id, e.target.value); setEditingConnId(null); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+                    style={{ fontSize: 11, textAlign: "center", background: "#1e293b", border: "1px solid #818cf8", borderRadius: 6, color: "#e2e8f0", padding: "2px 6px", width: 110 }} />
+                ) : conn.label ? (
+                  <span onClick={() => setEditingConnId(conn.id)}
+                    style={{ fontSize: 10.5, background: "#1e293b", border: "1px solid rgba(129,140,248,0.3)", borderRadius: 6, padding: "2px 8px", color: "#c7d2fe", cursor: "text", whiteSpace: "nowrap" }}>
+                    {conn.label}
+                  </span>
+                ) : (
+                  <span onClick={() => setEditingConnId(conn.id)} style={{ fontSize: 10, color: "#475569", cursor: "text", opacity: 0.6 }}>+ label</span>
+                )}
+              </div>
+            </foreignObject>
+          </g>
+        );
+      })}
+
+      {pendingLine && (
+        <line x1={pendingLine.x1} y1={pendingLine.y1} x2={pendingLine.x2} y2={pendingLine.y2}
+          stroke="#818cf8" strokeWidth={2 / zoom} strokeDasharray="6,4" pointerEvents="none" />
+      )}
+    </svg>
+  );
+}
+
+// ── Context Menu ──────────────────────────────────────────────────────────────
+
+function ContextMenu({ x, y, items }) {
+  return (
+    <div
+      onMouseDown={(e) => e.stopPropagation()}
+      style={{
+        position: "fixed", left: x, top: y, zIndex: 5000,
+        background: "var(--toolbar-bg)", backdropFilter: "blur(24px)",
+        border: "1px solid var(--toolbar-border)", borderRadius: 10,
+        padding: 4, minWidth: 170, boxShadow: "var(--shadow-toolbar)",
+      }}
+    >
+      {items.map((item, i) =>
+        item.divider ? (
+          <div key={i} style={{ height: 1, background: "var(--border-subtle)", margin: "4px 2px" }} />
+        ) : (
+          <button key={i} onClick={item.onClick} disabled={item.disabled}
+            style={{
+              display: "flex", alignItems: "center", gap: 8, width: "100%",
+              background: "none", border: "none", borderRadius: 7,
+              padding: "7px 10px", fontSize: 12.5, textAlign: "left",
+              color: item.danger ? "#f87171" : item.disabled ? "var(--text-faint)" : "var(--text-primary)",
+              cursor: item.disabled ? "default" : "pointer", opacity: item.disabled ? 0.4 : 1,
+            }}
+            onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.background = "var(--bg-hover)"; }}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+          >
+            <span style={{ width: 14, textAlign: "center" }}>{item.icon}</span>{item.label}
+          </button>
+        )
+      )}
     </div>
   );
 }
 
 // ── Draggable Board Card ───────────────────────────────────────────────────────
 
-function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelect, zoom, onContextMenu, onStartConnection, onDropIntoColumn, onDragOverColumn, dragOverColumnId }) {
-  const [hovered, setHovered] = useState(false);
+function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelect, zoom, onContextMenu, onStartConnection, onOpenModule, onDropIntoColumn, onDragOverColumn, dragOverColumnId }) {
   const dragRef = useRef({ active: false });
   const resizeRef = useRef({ active: false });
+  const [hovered, setHovered] = useState(false);
+
+  const isModule = MODULE_TYPES.includes(card.type);
+  const canDropIntoColumn = card.type === "NOTE" || card.type === "TODO";
 
   function handleMouseDown(e) {
     if (e.button !== 0) return;
@@ -365,7 +444,6 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
     e.stopPropagation();
     onBringToFront();
     onSelect();
-    const canDropIntoColumn = card.type === "NOTE" || card.type === "TODO";
     dragRef.current = { active: true, startX: e.clientX, startY: e.clientY, origX: card.x, origY: card.y };
 
     function onMove(ev) {
@@ -404,7 +482,6 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
     window.addEventListener("mouseup", onUp);
   }
 
-  const isModule = MODULE_TYPES.includes(card.type);
   const accentColor = MODULE_META[card.type]?.accent;
 
   return (
@@ -420,40 +497,22 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
           ? `0 0 0 2px ${accentColor ?? '#818cf8'}, 0 12px 40px rgba(0,0,0,0.6)`
           : "0 4px 24px rgba(0,0,0,0.4)",
         transition: "box-shadow 0.15s",
-        cursor: isModule ? "default" : "grab",
+        cursor: "grab",
       }}
       onMouseDown={handleMouseDown}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onDoubleClick={(e) => { if (isModule) { e.stopPropagation(); onOpenModule?.(card.type); } }}
       onContextMenu={onContextMenu}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-
-
       {card.type === "NOTE" && <NoteCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "IMAGE" && <ImageCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "LINK" && <LinkCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "TODO" && <TodoCard card={card} onChange={onChange} onDelete={onDelete} />}
-      {card.type === "COLUMN" && (
-        <ColumnCard card={card} onChange={onChange} onDelete={onDelete} isDragTarget={dragOverColumnId === card.id} />
-      )}
-      {isModule && (
-        <ModuleCard
-          card={card}
-          onDelete={onDelete}
-          onHeaderMouseDown={(e) => {
-            if (e.target.closest("button")) return;
-            e.preventDefault(); e.stopPropagation();
-            onBringToFront(); onSelect();
-            const orig = { x: card.x, y: card.y };
-            const start = { x: e.clientX, y: e.clientY };
-            function mv(ev) { onChange({ x: orig.x + (ev.clientX - start.x) / zoom, y: orig.y + (ev.clientY - start.y) / zoom }); }
-            function up() { window.removeEventListener("mousemove", mv); window.removeEventListener("mouseup", up); }
-            window.addEventListener("mousemove", mv);
-            window.addEventListener("mouseup", up);
-          }}
-        />
-      )}
+      {card.type === "COLUMN" && <ColumnCard card={card} onChange={onChange} onDelete={onDelete} isDragTarget={dragOverColumnId === card.id} />}
+      {isModule && <ModuleCard card={card} onDelete={onDelete} />}
+
       {/* Connector handle */}
       <div
         onMouseDown={(e) => { e.stopPropagation(); onStartConnection(card.id, e); }}
@@ -511,13 +570,13 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
       {/* Divider */}
       <div style={{ width: 1, height: 32, background: "var(--border-subtle)", margin: "0 8px", flexShrink: 0 }} />
 
-      {/* Module embed types */}
+      {/* Module opener types */}
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
         {MODULE_TYPES.map((key) => {
           const def = CARD_TYPES[key];
           const meta = MODULE_META[key];
           return (
-            <button key={key} onClick={() => onAdd(key)} title={`Embed ${def.label}`}
+            <button key={key} onClick={() => onAdd(key)} title={`Add ${def.label}`}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, background: "none", border: "none", cursor: "pointer", padding: "5px 8px", borderRadius: 9, transition: "background 0.12s" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = `${meta.accent}15`; }}
               onMouseLeave={(e) => e.currentTarget.style.background = "none"}>
@@ -543,98 +602,24 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
     </div>
   );
 }
-function ContextMenu({ x, y, items }) {
+
+// ── Mini-map ──────────────────────────────────────────────────────────────────
+
+function MiniMap({ cards }) {
+  if (cards.length === 0) return null;
+  const W = 150, H = 90;
+  const minX = Math.min(...cards.map((c) => c.x));
+  const minY = Math.min(...cards.map((c) => c.y));
+  const maxX = Math.max(...cards.map((c) => c.x + c.w));
+  const maxY = Math.max(...cards.map((c) => c.y + c.h));
+  const rangeX = maxX - minX || 800, rangeY = maxY - minY || 600;
+  const s = Math.min(W / rangeX, H / rangeY, 0.24);
   return (
-    <div
-      onMouseDown={(e) => e.stopPropagation()}
-      style={{
-        position: "fixed", left: x, top: y, zIndex: 5000,
-        background: "var(--toolbar-bg)", backdropFilter: "blur(24px)",
-        border: "1px solid var(--toolbar-border)", borderRadius: 10,
-        padding: 4, minWidth: 170, boxShadow: "var(--shadow-toolbar)",
-      }}
-    >
-      {items.map((item, i) =>
-        item.divider ? (
-          <div key={i} style={{ height: 1, background: "var(--border-subtle)", margin: "4px 2px" }} />
-        ) : (
-          <button key={i} onClick={item.onClick} disabled={item.disabled}
-            style={{
-              display: "flex", alignItems: "center", gap: 8, width: "100%",
-              background: "none", border: "none", borderRadius: 7,
-              padding: "7px 10px", fontSize: 12.5, textAlign: "left",
-              color: item.danger ? "#f87171" : item.disabled ? "var(--text-faint)" : "var(--text-primary)",
-              cursor: item.disabled ? "default" : "pointer", opacity: item.disabled ? 0.4 : 1,
-            }}
-            onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.background = "var(--bg-hover)"; }}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
-          >
-            <span style={{ width: 14, textAlign: "center" }}>{item.icon}</span>{item.label}
-          </button>
-        )
-      )}
+    <div style={{ position: "absolute", top: 14, right: 14, width: W, height: H, background: "var(--minimap-bg)", border: "1px solid var(--minimap-border)", borderRadius: 8, overflow: "hidden", zIndex: 900, backdropFilter: "blur(10px)", transition: "background 0.3s" }}>
+      {cards.map((c) => (
+        <div key={c.id} style={{ position: "absolute", left: (c.x - minX) * s, top: (c.y - minY) * s, width: Math.max(4, c.w * s), height: Math.max(3, c.h * s), background: CARD_TYPES[c.type]?.color ?? "#94a3b8", borderRadius: 2, opacity: 0.75 }} />
+      ))}
     </div>
-  );
-}
-function ConnectionsLayer({ cards, connections, zoom, pendingLine, editingConnId, setEditingConnId, onUpdateLabel, onDeleteConnection }) {
-  function edgePoint(from, to) {
-    const cx = from.x + from.w / 2, cy = from.y + from.h / 2;
-    const dx = (to.x + to.w / 2) - cx, dy = (to.y + to.h / 2) - cy;
-    if (dx === 0 && dy === 0) return { x: cx, y: cy };
-    const scale = Math.min(from.w / 2 / Math.abs(dx || 1e-6), from.h / 2 / Math.abs(dy || 1e-6));
-    return { x: cx + dx * scale, y: cy + dy * scale };
-  }
-
-  return (
-    <svg style={{ position: "absolute", left: 0, top: 0, width: 1, height: 1, overflow: "visible", pointerEvents: "none" }}>
-      <defs>
-        <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill="#818cf8" />
-        </marker>
-      </defs>
-
-      {connections.map((conn) => {
-        const fromCard = cards.find((c) => c.id === conn.fromId);
-        const toCard = cards.find((c) => c.id === conn.toId);
-        if (!fromCard || !toCard) return null;
-        const p1 = edgePoint(fromCard, toCard);
-        const p2 = edgePoint(toCard, fromCard);
-        const midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
-        return (
-          <g key={conn.id}>
-            <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#818cf8" strokeWidth={2 / zoom} markerEnd="url(#arrowhead)" />
-            {/* hitbox lebih tebal buat klik/klik-kanan */}
-            <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="transparent" strokeWidth={14 / zoom}
-              style={{ pointerEvents: "stroke", cursor: "pointer" }}
-              onClick={(e) => { e.stopPropagation(); setEditingConnId(conn.id); }}
-              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteConnection(conn.id); }}
-            />
-            <foreignObject x={midX - 60} y={midY - 14} width={120} height={28} style={{ pointerEvents: "auto" }}>
-              <div onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ display: "flex", justifyContent: "center" }}>
-                {editingConnId === conn.id ? (
-                  <input autoFocus defaultValue={conn.label}
-                    onBlur={(e) => { onUpdateLabel(conn.id, e.target.value); setEditingConnId(null); }}
-                    onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
-                    style={{ fontSize: 11, textAlign: "center", background: "#1e293b", border: "1px solid #818cf8", borderRadius: 6, color: "#e2e8f0", padding: "2px 6px", width: 110 }} />
-                ) : conn.label ? (
-                  <span onClick={() => setEditingConnId(conn.id)}
-                    style={{ fontSize: 10.5, background: "#1e293b", border: "1px solid rgba(129,140,248,0.3)", borderRadius: 6, padding: "2px 8px", color: "#c7d2fe", cursor: "text", whiteSpace: "nowrap" }}>
-                    {conn.label}
-                  </span>
-                ) : (
-                  <span onClick={() => setEditingConnId(conn.id)} style={{ fontSize: 10, color: "#475569", cursor: "text", opacity: 0.6 }}>+ label</span>
-                )}
-              </div>
-            </foreignObject>
-          </g>
-        );
-      })}
-
-      {pendingLine && (
-        <line x1={pendingLine.x1} y1={pendingLine.y1} x2={pendingLine.x2} y2={pendingLine.y2}
-          stroke="#818cf8" strokeWidth={2 / zoom} strokeDasharray="6,4" pointerEvents="none" />
-      )}
-    </svg>
   );
 }
 
@@ -642,23 +627,137 @@ function ConnectionsLayer({ cards, connections, zoom, pendingLine, editingConnId
 
 export default function MilanoteBoard() {
   const [cards, setCards] = useSupabaseStorage("mythos_milanote_cards", []);
+  const [connections, setConnections] = useSupabaseStorage("mythos_milanote_connections", []);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [selectedId, setSelectedId] = useState(null);
   const [boardName, setBoardName] = useSupabaseStorage("mythos_board_name", "My Story Board");
   const [editingName, setEditingName] = useState(false);
+
   const [dragOverColumnId, setDragOverColumnId] = useState(null);
-  const [contextMenu, setContextMenu] = useState(null); // { x, y, cardId?, type: "card" | "canvas" }
-  const [clipboard, setClipboard] = useState(null);      // { data, cut }
-  const [connections, setConnections] = useSupabaseStorage("mythos_milanote_connections", []);
   const [pendingConnection, setPendingConnection] = useState(null); // { fromId, x2, y2 } world coords
   const [editingConnId, setEditingConnId] = useState(null);
+
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, cardId?, type: "card" | "canvas" }
+  const [clipboard, setClipboard] = useState(null);      // { data, cut }
+
+  const [openModuleType, setOpenModuleType] = useState(null); // null = on the board, else module key
+
+  const canvasRef = useRef(null);
+  const panRef = useRef({ active: false });
+
+  // ── Canvas pan (drag background) ──
+  function handleCanvasMouseDown(e) {
+    if (e.button !== 0) return;
+    const target = e.target;
+    if (target !== canvasRef.current && !target.classList.contains("board-bg")) return;
+    setSelectedId(null);
+    setContextMenu(null);
+    panRef.current = { active: true, startX: e.clientX, startY: e.clientY, origX: pan.x, origY: pan.y };
+    function onMove(ev) {
+      if (!panRef.current.active) return;
+      setPan({ x: panRef.current.origX + (ev.clientX - panRef.current.startX), y: panRef.current.origY + (ev.clientY - panRef.current.startY) });
+    }
+    function onUp() { panRef.current.active = false; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
+  // ── Wheel: plain scroll = pan, pinch / ctrl+scroll = zoom ──
+  function handleWheel(e) {
+    if (e.target.closest("[data-scrollable]")) return; // let native scroll happen inside cards
+    e.preventDefault();
+    const isPinch = e.ctrlKey || e.metaKey;
+    if (isPinch) {
+      setZoom((z) => clamp(z + (-e.deltaY * 0.01), 0.15, 3));
+    } else {
+      setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }));
+    }
+  }
+
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  // ── Close context menu on outside click / Escape ──
+  useEffect(() => {
+    if (!contextMenu) return;
+    function handleClick() { setContextMenu(null); }
+    function handleKey(e) { if (e.key === "Escape") setContextMenu(null); }
+    window.addEventListener("mousedown", handleClick);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [contextMenu]);
 
   function worldPointFromScreen(clientX, clientY) {
     const rect = canvasRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
     return { x: (clientX - rect.left - pan.x) / zoom, y: (clientY - rect.top - pan.y) / zoom };
   }
 
+  // ── Card CRUD ──
+  function addCard(type) {
+    const rect = canvasRef.current?.getBoundingClientRect() ?? { width: 900, height: 600 };
+    const jitter = () => (Math.random() - 0.5) * 100;
+    const size = DEFAULT_SIZES[type] ?? { w: 240, h: 160 };
+    const cx = (rect.width / 2 - pan.x) / zoom;
+    const cy = (rect.height / 2 - pan.y) / zoom;
+    const card = newCard(type, { x: cx - size.w / 2 + jitter(), y: cy - size.h / 2 + jitter() });
+    setCards((arr) => [...arr, card]);
+    setSelectedId(card.id);
+  }
+
+  function updateCard(id, patch) { setCards((arr) => arr.map((c) => c.id === id ? { ...c, ...patch } : c)); }
+
+  function deleteCard(id) {
+    setCards((arr) => arr.filter((c) => c.id !== id));
+    setConnections((arr) => arr.filter((c) => c.fromId !== id && c.toId !== id));
+    if (selectedId === id) setSelectedId(null);
+  }
+
+  function bringToFront(id) { setCards((arr) => arr.map((c) => c.id === id ? { ...c, zIndex: Date.now() } : c)); }
+
+  function handleZoom(delta) {
+    if (delta === 0) { setZoom(1); setPan({ x: 0, y: 0 }); return; }
+    setZoom((z) => clamp(z + delta, 0.15, 3));
+  }
+
+  function fitAll() {
+    if (cards.length === 0) { setZoom(1); setPan({ x: 0, y: 0 }); return; }
+    const rect = canvasRef.current?.getBoundingClientRect() ?? { width: 900, height: 600 };
+    const minX = Math.min(...cards.map((c) => c.x));
+    const minY = Math.min(...cards.map((c) => c.y));
+    const maxX = Math.max(...cards.map((c) => c.x + c.w));
+    const maxY = Math.max(...cards.map((c) => c.y + c.h));
+    const pad = 80;
+    const bw = maxX - minX + pad * 2, bh = maxY - minY + pad * 2;
+    const nz = clamp(Math.min(rect.width / bw, rect.height / bh), 0.15, 2);
+    setZoom(nz);
+    setPan({ x: rect.width / 2 - ((minX + maxX) / 2) * nz, y: rect.height / 2 - ((minY + maxY) / 2) * nz });
+  }
+
+  // ── Drop Note/To-do into Column ──
+  function moveCardIntoColumn(cardId, columnId) {
+    if (cardId === columnId) return;
+    setCards((arr) => {
+      const dragged = arr.find((c) => c.id === cardId);
+      const column = arr.find((c) => c.id === columnId);
+      if (!dragged || !column || column.type !== "COLUMN") return arr;
+      if (dragged.type !== "NOTE" && dragged.type !== "TODO") return arr;
+      const { x, y, w, h, zIndex, createdAt, ...itemFields } = dragged;
+      const updatedColumn = { ...column, items: [...(column.items || []), itemFields] };
+      return arr.filter((c) => c.id !== cardId).map((c) => (c.id === columnId ? updatedColumn : c));
+    });
+    setConnections((arr) => arr.filter((c) => c.fromId !== cardId && c.toId !== cardId));
+    setSelectedId(null);
+  }
+
+  // ── Connections (line + text relation) ──
   function startConnection(fromId, e) {
     e.preventDefault(); e.stopPropagation();
     const start = worldPointFromScreen(e.clientX, e.clientY);
@@ -666,7 +765,7 @@ export default function MilanoteBoard() {
 
     function onMove(ev) {
       const p = worldPointFromScreen(ev.clientX, ev.clientY);
-      setPendingConnection((pc) => (pc ? { ...pc, x2: p.x, y2: p.y } : pc));
+      setPendingConnection((pc) => pc ? { ...pc, x2: p.x, y2: p.y } : pc);
     }
     function onUp(ev) {
       window.removeEventListener("mousemove", onMove);
@@ -683,12 +782,10 @@ export default function MilanoteBoard() {
     window.addEventListener("mouseup", onUp);
   }
 
-  function updateConnectionLabel(id, label) {
-    setConnections((arr) => arr.map((c) => (c.id === id ? { ...c, label } : c)));
-  }
-  function deleteConnection(id) {
-    setConnections((arr) => arr.filter((c) => c.id !== id));
-  }
+  function updateConnectionLabel(id, label) { setConnections((arr) => arr.map((c) => c.id === id ? { ...c, label } : c)); }
+  function deleteConnection(id) { setConnections((arr) => arr.filter((c) => c.id !== id)); }
+
+  // ── Context menu actions ──
   function openCardMenu(e, cardId) {
     e.preventDefault();
     e.stopPropagation();
@@ -730,229 +827,168 @@ export default function MilanoteBoard() {
     const worldX = (screenX - rect.left - pan.x) / zoom;
     const worldY = (screenY - rect.top - pan.y) / zoom;
     const size = DEFAULT_SIZES[clipboard.data.type] ?? { w: clipboard.data.w, h: clipboard.data.h };
-    const newCard = { ...clipboard.data, id: uuidv4(), x: worldX - size.w / 2, y: worldY - size.h / 2, zIndex: Date.now(), createdAt: new Date().toISOString() };
-    setCards((arr) => [...arr, newCard]);
-    setSelectedId(newCard.id);
-    if (clipboard.cut) setClipboard(null); // paste sekali abis cut
+    const newC = { ...clipboard.data, id: uuidv4(), x: worldX - size.w / 2, y: worldY - size.h / 2, zIndex: Date.now(), createdAt: new Date().toISOString() };
+    setCards((arr) => [...arr, newC]);
+    setSelectedId(newC.id);
+    if (clipboard.cut) setClipboard(null);
     setContextMenu(null);
   }
 
-  function moveCardIntoColumn(cardId, columnId) {
-    if (cardId === columnId) return;
-    setCards((arr) => {
-      const dragged = arr.find((c) => c.id === cardId);
-      const column = arr.find((c) => c.id === columnId);
-      if (!dragged || !column || column.type !== "COLUMN") return arr;
-      if (dragged.type !== "NOTE" && dragged.type !== "TODO") return arr;
-      const { x, y, w, h, zIndex, createdAt, ...itemFields } = dragged;
-      const updatedColumn = { ...column, items: [...(column.items || []), itemFields] };
-      return arr.filter((c) => c.id !== cardId).map((c) => (c.id === columnId ? updatedColumn : c));
-    });
-    setSelectedId(null);
-  }
-  const canvasRef = useRef(null);
-  const panRef = useRef({ active: false });
-  useEffect(() => {
-    if (!contextMenu) return;
-    function handleClick() { setContextMenu(null); }
-    function handleKey(e) { if (e.key === "Escape") setContextMenu(null); }
-    window.addEventListener("mousedown", handleClick);
-    window.addEventListener("keydown", handleKey);
-    return () => {
-      window.removeEventListener("mousedown", handleClick);
-      window.removeEventListener("keydown", handleKey);
-    };
-  }, [contextMenu]);
-  function handleCanvasMouseDown(e) {
-    if (e.button !== 0) return;
-    // Only pan when clicking the canvas background itself
-    const target = e.target;
-    if (target !== canvasRef.current && !target.classList.contains("board-bg")) return;
-    setSelectedId(null);
-    panRef.current = { active: true, startX: e.clientX, startY: e.clientY, origX: pan.x, origY: pan.y };
-    function onMove(ev) {
-      if (!panRef.current.active) return;
-      setPan({ x: panRef.current.origX + (ev.clientX - panRef.current.startX), y: panRef.current.origY + (ev.clientY - panRef.current.startY) });
-    }
-    function onUp() { panRef.current.active = false; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }
-
-  function handleWheel(e) {
-    if (e.target.closest("[data-scrollable]")) return; // biarin scroll native di dalam module card
-    e.preventDefault();
-
-    const isPinch = e.ctrlKey || e.metaKey; // trackpad pinch & ctrl+scroll dikirim sbg wheel dgn ctrlKey=true
-
-    if (isPinch) {
-      setZoom((z) => clamp(z + (-e.deltaY * 0.01), 0.15, 3));
-    } else {
-      // scroll biasa → geser canvas (pan)
-      setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }));
-    }
-  }
-
-  useEffect(() => {
-    const el = canvasRef.current;
-    if (!el) return;
-    el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => el.removeEventListener("wheel", handleWheel);
-  }, []);
-
-  function addCard(type) {
-    const rect = canvasRef.current?.getBoundingClientRect() ?? { width: 900, height: 600 };
-    const jitter = () => (Math.random() - 0.5) * 100;
-    const size = DEFAULT_SIZES[type] ?? { w: 240, h: 160 };
-    const cx = (rect.width / 2 - pan.x) / zoom;
-    const cy = (rect.height / 2 - pan.y) / zoom;
-    const card = newCard(type, { x: cx - size.w / 2 + jitter(), y: cy - size.h / 2 + jitter() });
-    setCards((arr) => [...arr, card]);
-    setSelectedId(card.id);
-  }
-
-  function updateCard(id, patch) { setCards((arr) => arr.map((c) => c.id === id ? { ...c, ...patch } : c)); }
-  function deleteCard(id) {
-    setCards((arr) => arr.filter((c) => c.id !== id));
-    setConnections((arr) => arr.filter((c) => c.fromId !== id && c.toId !== id));
-    if (selectedId === id) setSelectedId(null);
-  }
-  function bringToFront(id) { setCards((arr) => arr.map((c) => c.id === id ? { ...c, zIndex: Date.now() } : c)); }
-
-  function handleZoom(delta) {
-    if (delta === 0) { setZoom(1); setPan({ x: 0, y: 0 }); return; }
-    setZoom((z) => clamp(z + delta, 0.15, 3));
-  }
-
-  function fitAll() {
-    if (cards.length === 0) { setZoom(1); setPan({ x: 0, y: 0 }); return; }
-    const rect = canvasRef.current?.getBoundingClientRect() ?? { width: 900, height: 600 };
-    const minX = Math.min(...cards.map((c) => c.x));
-    const minY = Math.min(...cards.map((c) => c.y));
-    const maxX = Math.max(...cards.map((c) => c.x + c.w));
-    const maxY = Math.max(...cards.map((c) => c.y + c.h));
-    const pad = 80;
-    const bw = maxX - minX + pad * 2, bh = maxY - minY + pad * 2;
-    const nz = clamp(Math.min(rect.width / bw, rect.height / bh), 0.15, 2);
-    setZoom(nz);
-    setPan({ x: rect.width / 2 - ((minX + maxX) / 2) * nz, y: rect.height / 2 - ((minY + maxY) / 2) * nz });
-  }
+  // ── Module navigation ──
+  function openModule(type) { setOpenModuleType(type); setSelectedId(null); setContextMenu(null); }
+  function closeModule() { setOpenModuleType(null); }
 
   const sorted = [...cards].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
 
+  const pendingLine = pendingConnection ? (() => {
+    const fromCard = cards.find((c) => c.id === pendingConnection.fromId);
+    if (!fromCard) return null;
+    return { x1: fromCard.x + fromCard.w / 2, y1: fromCard.y + fromCard.h / 2, x2: pendingConnection.x2, y2: pendingConnection.y2 };
+  })() : null;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 108px)", minHeight: 540, position: "relative" }}>
-      {/* Board title */}
+      {/* Board title / breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 10, flexShrink: 0 }}>
-        {editingName ? (
-          <input autoFocus value={boardName} onChange={(e) => setBoardName(e.target.value)}
-            onBlur={() => setEditingName(false)}
-            onKeyDown={(e) => { if (e.key === "Enter") setEditingName(false); }}
-            style={{ background: "transparent", border: "none", borderBottom: "2px solid #818cf8", outline: "none", color: "var(--text-primary)", fontSize: 20, fontWeight: 700, minWidth: 200 }} />
-        ) : (
-          <h2 onClick={() => setEditingName(true)}
-            style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", cursor: "text", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
-            {boardName}<span style={{ fontSize: 13, opacity: 0.25 }}>✎</span>
-          </h2>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          {editingName && !openModuleType ? (
+            <input autoFocus value={boardName} onChange={(e) => setBoardName(e.target.value)}
+              onBlur={() => setEditingName(false)}
+              onKeyDown={(e) => { if (e.key === "Enter") setEditingName(false); }}
+              style={{ background: "transparent", border: "none", borderBottom: "2px solid #818cf8", outline: "none", color: "var(--text-primary)", fontSize: 20, fontWeight: 700, minWidth: 200 }} />
+          ) : (
+            <h2
+              onClick={() => openModuleType ? closeModule() : setEditingName(true)}
+              style={{
+                fontSize: 20, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 6,
+                color: openModuleType ? "#818cf8" : "var(--text-primary)",
+                cursor: "pointer",
+              }}
+            >
+              🎨 {boardName}
+              {!openModuleType && <span style={{ fontSize: 13, opacity: 0.25 }}>✎</span>}
+            </h2>
+          )}
+
+          {openModuleType && (
+            <>
+              <span style={{ opacity: 0.3, fontSize: 18 }}>›</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                <span>{MODULE_META[openModuleType].icon}</span> {MODULE_META[openModuleType].label}
+              </span>
+            </>
+          )}
+        </div>
+
         <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-faint)" }}>
-          Scroll or drag to pan · Pinch to zoom · Drag card header to move
+          {openModuleType ? "Klik nama board untuk kembali" : "Scroll or drag to pan · Pinch to zoom · Double-click module card untuk buka board"}
         </span>
       </div>
 
-      {/* Canvas */}
-      <div
-        ref={canvasRef}
-        onMouseDown={handleCanvasMouseDown}
-        style={{
-          flex: 1, position: "relative", overflow: "hidden",
-          borderRadius: 16, border: "1px solid var(--border-subtle)",
-          cursor: "default",
-          transition: "border-color 0.3s",
-        }}
-      >
-        {/* Grid background layer — marked so mousedown can detect it */}
-        <div className="board-bg" style={{
-          position: "absolute", inset: 0, zIndex: 0,
-          background: "var(--canvas-bg)",
-          backgroundImage: `
-            radial-gradient(ellipse at 25% 35%, var(--canvas-glow1) 0%, transparent 55%),
-            radial-gradient(ellipse at 75% 65%, var(--canvas-glow2) 0%, transparent 55%),
-            repeating-linear-gradient(var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px),
-            repeating-linear-gradient(90deg, var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px)
-          `,
-          transition: "background 0.3s",
-        }} />
+      <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+        {/* Canvas — stays mounted (hidden, not unmounted) so pan/zoom state survives module navigation */}
+        <div
+          ref={canvasRef}
+          onMouseDown={handleCanvasMouseDown}
+          onContextMenu={openCanvasMenu}
+          style={{
+            position: "absolute", inset: 0, overflow: "hidden",
+            borderRadius: 16, border: "1px solid var(--border-subtle)",
+            cursor: "default",
+            transition: "border-color 0.3s",
+            display: openModuleType ? "none" : "block",
+          }}
+        >
+          {/* Grid background layer — marked so mousedown can detect it */}
+          <div className="board-bg" style={{
+            position: "absolute", inset: 0, zIndex: 0,
+            background: "var(--canvas-bg)",
+            backgroundImage: `
+              radial-gradient(ellipse at 25% 35%, var(--canvas-glow1) 0%, transparent 55%),
+              radial-gradient(ellipse at 75% 65%, var(--canvas-glow2) 0%, transparent 55%),
+              repeating-linear-gradient(var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px),
+              repeating-linear-gradient(90deg, var(--canvas-grid) 0px, var(--canvas-grid) 1px, transparent 1px, transparent 44px)
+            `,
+            transition: "background 0.3s",
+          }} />
 
-        {/* Transformed canvas world */}
-        <div style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", position: "absolute", width: 0, height: 0, zIndex: 1 }}>
-
-          <ConnectionsLayer
-            cards={cards}
-            connections={connections}
-            zoom={zoom}
-            editingConnId={editingConnId}
-            setEditingConnId={setEditingConnId}
-            onUpdateLabel={updateConnectionLabel}
-            onDeleteConnection={deleteConnection}
-            pendingLine={
-              pendingConnection
-                ? (() => {
-                  const fromCard = cards.find((c) => c.id === pendingConnection.fromId);
-                  if (!fromCard) return null;
-                  return { x1: fromCard.x + fromCard.w / 2, y1: fromCard.y + fromCard.h / 2, x2: pendingConnection.x2, y2: pendingConnection.y2 };
-                })()
-                : null
-            }
-          />
-
-          {sorted.map((card) => (
-            <BoardCard
-              key={card.id} card={card} zoom={zoom}
-              selected={selectedId === card.id}
-              onSelect={() => setSelectedId(card.id)}
-              onBringToFront={() => bringToFront(card.id)}
-              onChange={(patch) => updateCard(card.id, patch)}
-              onDelete={() => deleteCard(card.id)}
-              onContextMenu={(e) => openCardMenu(e, card.id)}
-              onStartConnection={startConnection}
-              onDropIntoColumn={(columnId) => moveCardIntoColumn(card.id, columnId)}
-              onDragOverColumn={setDragOverColumnId}
-              dragOverColumnId={dragOverColumnId}
+          {/* Transformed canvas world */}
+          <div style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", position: "absolute", width: 0, height: 0, zIndex: 1 }}>
+            <ConnectionsLayer
+              cards={cards}
+              connections={connections}
+              zoom={zoom}
+              editingConnId={editingConnId}
+              setEditingConnId={setEditingConnId}
+              onUpdateLabel={updateConnectionLabel}
+              onDeleteConnection={deleteConnection}
+              pendingLine={pendingLine}
             />
-          ))}
+
+            {sorted.map((card) => (
+              <BoardCard
+                key={card.id} card={card} zoom={zoom}
+                selected={selectedId === card.id}
+                onSelect={() => setSelectedId(card.id)}
+                onBringToFront={() => bringToFront(card.id)}
+                onChange={(patch) => updateCard(card.id, patch)}
+                onDelete={() => deleteCard(card.id)}
+                onContextMenu={(e) => openCardMenu(e, card.id)}
+                onStartConnection={startConnection}
+                onOpenModule={openModule}
+                onDropIntoColumn={(columnId) => moveCardIntoColumn(card.id, columnId)}
+                onDragOverColumn={setDragOverColumnId}
+                dragOverColumnId={dragOverColumnId}
+              />
+            ))}
+          </div>
+
+          {/* Empty state */}
+          {cards.length === 0 && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 2 }}>
+              <div style={{ fontSize: 44, marginBottom: 14, opacity: 0.12 }}>🎨</div>
+              <p style={{ color: "var(--text-muted)", fontSize: 15, fontWeight: 600 }}>Board is empty</p>
+              <p style={{ color: "var(--text-faint)", fontSize: 12, marginTop: 6 }}>Use the toolbar below — add notes, columns, or open Characters, Outline, and more</p>
+            </div>
+          )}
+
+          <MiniMap cards={cards} />
+          <Toolbar onAdd={addCard} zoom={zoom} onZoom={handleZoom} onFitAll={fitAll} cardCount={cards.length} />
+
+          {contextMenu?.type === "card" && (
+            <ContextMenu
+              x={contextMenu.x} y={contextMenu.y}
+              items={[
+                { icon: "📋", label: "Copy", onClick: () => copyCardToClipboard(contextMenu.cardId, false) },
+                { icon: "✂️", label: "Cut", onClick: () => copyCardToClipboard(contextMenu.cardId, true) },
+                { icon: "🧬", label: "Duplicate", onClick: () => duplicateCardById(contextMenu.cardId) },
+                { divider: true },
+                { icon: "🗑️", label: "Delete", danger: true, onClick: () => deleteCardById(contextMenu.cardId) },
+              ]}
+            />
+          )}
+          {contextMenu?.type === "canvas" && (
+            <ContextMenu
+              x={contextMenu.x} y={contextMenu.y}
+              items={[
+                { icon: "📌", label: "Paste", disabled: !clipboard, onClick: () => pasteClipboard(contextMenu.x, contextMenu.y) },
+              ]}
+            />
+          )}
         </div>
 
-        {/* Empty state */}
-        {cards.length === 0 && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 2 }}>
-            <div style={{ fontSize: 44, marginBottom: 14, opacity: 0.12 }}>🎨</div>
-            <p style={{ color: "var(--text-muted)", fontSize: 15, fontWeight: 600 }}>Board is empty</p>
-            <p style={{ color: "var(--text-faint)", fontSize: 12, marginTop: 6 }}>Use the toolbar below — add notes, or embed Characters, Outline, and more</p>
+        {/* Module board — shown in place of canvas when a module is opened */}
+        {openModuleType && (
+          <div style={{
+            position: "absolute", inset: 0, overflowY: "auto",
+            borderRadius: 16, border: "1px solid var(--border-subtle)",
+            padding: 20, background: "var(--bg-surface)",
+          }}>
+            {(() => {
+              const Comp = MODULE_META[openModuleType].Component;
+              return <Comp />;
+            })()}
           </div>
-        )}
-
-
-        <Toolbar onAdd={addCard} zoom={zoom} onZoom={handleZoom} onFitAll={fitAll} cardCount={cards.length} />
-        {contextMenu?.type === "card" && (
-          <ContextMenu
-            x={contextMenu.x} y={contextMenu.y}
-            items={[
-              { icon: "📋", label: "Copy", onClick: () => copyCardToClipboard(contextMenu.cardId, false) },
-              { icon: "✂️", label: "Cut", onClick: () => copyCardToClipboard(contextMenu.cardId, true) },
-              { icon: "🧬", label: "Duplicate", onClick: () => duplicateCardById(contextMenu.cardId) },
-              { divider: true },
-              { icon: "🗑️", label: "Delete", danger: true, onClick: () => deleteCardById(contextMenu.cardId) },
-            ]}
-          />
-        )}
-        {contextMenu?.type === "canvas" && (
-          <ContextMenu
-            x={contextMenu.x} y={contextMenu.y}
-            items={[
-              { icon: "📌", label: "Paste", disabled: !clipboard, onClick: () => pasteClipboard(contextMenu.x, contextMenu.y) },
-            ]}
-          />
         )}
       </div>
     </div>
