@@ -948,7 +948,7 @@ export default function MilanoteBoard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 108px)", minHeight: 540, position: "relative" }}>
       {/* Board title / breadcrumb */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 10, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
           {editingName && !openModuleType ? (
             <input autoFocus value={boardName} onChange={(e) => setBoardName(e.target.value)}
