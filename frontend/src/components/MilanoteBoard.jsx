@@ -825,7 +825,7 @@ function BoardCanvas({ cards, setCards, connections, setConnections, showModuleT
       onContextMenu={openCanvasMenu}
       style={{
         position: "absolute", inset: 0, overflow: "hidden",
-        borderRadius: 16, border: "1px solid var(--border-subtle)",
+        border: "1px solid var(--border-subtle)",
         cursor: "default",
         transition: "border-color 0.3s",
         display: hidden ? "none" : "block",
