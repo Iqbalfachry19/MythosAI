@@ -15,11 +15,10 @@ function NavTab({ active, onClick, icon, label }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-        active
+      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${active
           ? "bg-brand-600 text-white"
           : "text-slate-400 hover:text-white hover:bg-white/8"
-      }`}
+        }`}
     >
       <span>{icon}</span>
       <span className="hidden sm:inline">{label}</span>
@@ -175,7 +174,7 @@ export default function App() {
       <TutorialModal open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
 
       {/* ── Main ───────────────────────────────────────────────────────── */}
-      <main className={`flex-1 w-full ${page === "workspace" ? "px-4 py-4" : "px-4 py-8 max-w-5xl mx-auto"}`}>
+      <main className={`flex-1 w-full ${page === "workspace" ? "" : "px-4 py-8 max-w-5xl mx-auto"}`}>
         {/* ── Story page ── */}
         {page === "story" && (
           <>
