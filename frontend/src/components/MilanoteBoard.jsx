@@ -946,7 +946,7 @@ export default function MilanoteBoard() {
   const nestedConnections = openCard?.boardConnections || [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 80px)", minHeight: 540, position: "relative" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)", minHeight: 540, position: "relative" }}>
       {/* Board title / breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", paddingTop: 10, paddingLeft: 10, paddingRight: 10, paddingBottom: 10, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
