@@ -326,8 +326,8 @@ function ModuleCard({ card, onChange, onDelete }) {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: 20, textAlign: "center" }}>
         <span style={{ fontSize: 40, opacity: 0.5 }}>{icon}</span>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Double-click untuk buka board {displayLabel}</span>
-        {count > 0 && <span style={{ fontSize: 10.5, color: "#475569" }}>{count} card di dalam</span>}
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Double-click to open {displayLabel}</span>
+        {count > 0 && <span style={{ fontSize: 10.5, color: "#475569" }}>{count} cards inside</span>}
       </div>
     </div>
   );
@@ -981,7 +981,7 @@ export default function MilanoteBoard() {
         </div>
 
         <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-faint)" }}>
-          {openModuleType ? "Klik nama board untuk kembali" : "Scroll or drag to pan · Pinch to zoom · Double-click sebuah tile untuk buka board-nya"}
+          {openModuleType ? "Click the board name to go back." : "Scroll or drag to pan · Pinch to zoom · Double-click a tile to open its board."}
         </span>
       </div>
 
@@ -995,7 +995,7 @@ export default function MilanoteBoard() {
           showModuleTypes={true}
           onOpenModule={openModule}
           hidden={!!openModuleType}
-          emptyHint="Use the toolbar below — add notes, columns, or a Characters/Outline/etc. tile"
+          emptyHint="Use the toolbar below to add notes, columns, or module boards such as Characters, Outline, and Worldbuilding."
         />
 
         {/* Nested board for whichever tile is open — starts empty, fills up as the user adds cards */}
@@ -1009,7 +1009,7 @@ export default function MilanoteBoard() {
             showModuleTypes={false}
             onOpenModule={undefined}
             hidden={false}
-            emptyHint="Board ini masih kosong — mulai tambahkan card dari toolbar di bawah"
+            emptyHint="This board is empty — start adding cards using the toolbar below."
           />
         )}
       </div>
