@@ -22,10 +22,10 @@ function WorkspaceTab({ tab, active, onClick }) {
     <button
       onClick={() => onClick(tab.id)}
       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${active
-          ? tab.id === "board"
-            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-            : "bg-brand-600 text-white"
-          : "text-slate-400 hover:text-white hover:bg-white/8"
+        ? tab.id === "board"
+          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+          : "bg-brand-600 text-white"
+        : "text-slate-400 hover:text-white hover:bg-white/8"
         }`}
     >
       <span>{tab.icon}</span>
@@ -42,22 +42,10 @@ export default function WritingWorkspace() {
     <div className="space-y-4 animate-fade-in">
       {/* Page header — only show when not on board to save space */}
 
-      {/* Tab bar */}
-      <div className="flex gap-1.5 flex-wrap border-b border-white/10 pb-3">
-        {TABS.map((tab) => (
-          <WorkspaceTab key={tab.id} tab={tab} active={activeTab === tab.id} onClick={setActiveTab} />
-        ))}
-      </div>
 
       {/* Panel */}
       <div>
         {activeTab === "board" && <MilanoteBoard />}
-        {activeTab === "characters" && <CharacterManager />}
-        {activeTab === "outline" && <OutlineBoard />}
-        {activeTab === "world" && <WorldbuildingPanel />}
-        {activeTab === "locations" && <LocationManager />}
-        {activeTab === "braindump" && <BraindumpBoard />}
-        {activeTab === "citations" && <CitationTracker />}
       </div>
     </div>
   );
