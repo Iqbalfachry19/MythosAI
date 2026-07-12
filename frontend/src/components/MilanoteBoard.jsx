@@ -72,7 +72,7 @@ function newCard(type, pos) {
     case "LINK": return { ...base, url: "", title: "", favicon: "" };
     case "TODO": return { ...base, title: "To-do", items: [] };
     case "COLUMN": return { ...base, label: "Column", items: [] };
-    default: return base; // module opener cards need no extra data
+    default: return { ...base, label: MODULE_META[type]?.label ?? type }; // module opener cards get an editable label
   }
 }
 
@@ -281,10 +281,11 @@ const MODULE_META = {
   CITATIONS: { label: "Citations", icon: "📚", accent: "#a78bfa", Component: CitationTracker },
 };
 
-function ModuleCard({ card, onDelete }) {
+function ModuleCard({ card, onChange, onDelete }) {
   const meta = MODULE_META[card.type];
   if (!meta) return null;
-  const { label, icon, accent } = meta;
+  const { icon, accent } = meta;
+  const displayLabel = card.label ?? meta.label;
 
   return (
     <div style={{
@@ -305,8 +306,14 @@ function ModuleCard({ card, onDelete }) {
         flexShrink: 0,
       }}>
         <span style={{ fontSize: 16 }}>{icon}</span>
-        <span style={{ color: accent, fontWeight: 700, fontSize: 13, letterSpacing: 0.3 }}>{label}</span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
+        <input
+          value={displayLabel}
+          onChange={(e) => onChange({ label: e.target.value })}
+          onClick={(e) => e.stopPropagation()}
+          placeholder={meta.label}
+          style={{ flex: 1, minWidth: 0, background: "none", border: "none", outline: "none", color: accent, fontWeight: 700, fontSize: 13, letterSpacing: 0.3 }}
+        />
+        <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
           <span style={{ fontSize: 10, color: "#334155", background: "rgba(255,255,255,0.04)", padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)" }}>
             board
           </span>
@@ -321,7 +328,7 @@ function ModuleCard({ card, onDelete }) {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20, textAlign: "center" }}>
         <span style={{ fontSize: 40, opacity: 0.5 }}>{icon}</span>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Double-click untuk buka board {label}</span>
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Double-click untuk buka board {displayLabel}</span>
       </div>
     </div>
   );
@@ -501,7 +508,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
       }}
       onMouseDown={handleMouseDown}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      onDoubleClick={(e) => { if (isModule) { e.stopPropagation(); onOpenModule?.(card.type); } }}
+      onDoubleClick={(e) => { if (isModule) { e.stopPropagation(); onOpenModule?.(card.type, card.id); } }}
       onContextMenu={onContextMenu}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -511,7 +518,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
       {card.type === "LINK" && <LinkCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "TODO" && <TodoCard card={card} onChange={onChange} onDelete={onDelete} />}
       {card.type === "COLUMN" && <ColumnCard card={card} onChange={onChange} onDelete={onDelete} isDragTarget={dragOverColumnId === card.id} />}
-      {isModule && <ModuleCard card={card} onDelete={onDelete} />}
+      {isModule && <ModuleCard card={card} onChange={onChange} onDelete={onDelete} />}
 
       {/* Connector handle */}
       <div
@@ -605,6 +612,7 @@ function Toolbar({ onAdd, zoom, onZoom, onFitAll, cardCount }) {
 
 
 
+
 // ── Main MilanoteBoard ────────────────────────────────────────────────────────
 
 export default function MilanoteBoard() {
@@ -624,6 +632,7 @@ export default function MilanoteBoard() {
   const [clipboard, setClipboard] = useState(null);      // { data, cut }
 
   const [openModuleType, setOpenModuleType] = useState(null); // null = on the board, else module key
+  const [openModuleCardId, setOpenModuleCardId] = useState(null); // which card instance is open (for its custom label)
 
   const canvasRef = useRef(null);
   const panRef = useRef({ active: false });
@@ -817,8 +826,8 @@ export default function MilanoteBoard() {
   }
 
   // ── Module navigation ──
-  function openModule(type) { setOpenModuleType(type); setSelectedId(null); setContextMenu(null); }
-  function closeModule() { setOpenModuleType(null); }
+  function openModule(type, cardId) { setOpenModuleType(type); setOpenModuleCardId(cardId); setSelectedId(null); setContextMenu(null); }
+  function closeModule() { setOpenModuleType(null); setOpenModuleCardId(null); }
 
   const sorted = [...cards].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
 
@@ -856,7 +865,8 @@ export default function MilanoteBoard() {
             <>
               <span style={{ opacity: 0.3, fontSize: 18 }}>›</span>
               <span style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
-                <span>{MODULE_META[openModuleType].icon}</span> {MODULE_META[openModuleType].label}
+                <span>{MODULE_META[openModuleType].icon}</span>
+                {(cards.find((c) => c.id === openModuleCardId)?.label) ?? MODULE_META[openModuleType].label}
               </span>
             </>
           )}

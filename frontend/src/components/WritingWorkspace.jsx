@@ -1,10 +1,4 @@
 import { useState } from "react";
-import CharacterManager from "./CharacterManager.jsx";
-import OutlineBoard from "./OutlineBoard.jsx";
-import WorldbuildingPanel from "./WorldbuildingPanel.jsx";
-import LocationManager from "./LocationManager.jsx";
-import BraindumpBoard from "./BraindumpBoard.jsx";
-import CitationTracker from "./CitationTracker.jsx";
 import MilanoteBoard from "./MilanoteBoard.jsx";
 
 const TABS = [
@@ -17,23 +11,7 @@ const TABS = [
   { id: "citations", icon: "📚", label: "Citations", short: "Citations" },
 ];
 
-function WorkspaceTab({ tab, active, onClick }) {
-  return (
-    <button
-      onClick={() => onClick(tab.id)}
-      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${active
-        ? tab.id === "board"
-          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-          : "bg-brand-600 text-white"
-        : "text-slate-400 hover:text-white hover:bg-white/8"
-        }`}
-    >
-      <span>{tab.icon}</span>
-      <span className="hidden sm:inline">{tab.label}</span>
-      <span className="sm:hidden">{tab.short}</span>
-    </button>
-  );
-}
+
 
 export default function WritingWorkspace() {
   const [activeTab, setActiveTab] = useState("board");
