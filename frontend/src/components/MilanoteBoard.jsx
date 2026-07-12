@@ -521,7 +521,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
       {/* Connector handle */}
       <div
         onMouseDown={(e) => { e.stopPropagation(); onStartConnection(card.id, e); }}
-        title="Drag untuk hubungkan ke card lain"
+        title="Drag to connect to another card"
         style={{
           position: "absolute", right: -7, top: "50%", transform: "translateY(-50%)",
           width: 14, height: 14, borderRadius: "50%",
