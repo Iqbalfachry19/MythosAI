@@ -16,8 +16,8 @@ function NavTab({ active, onClick, icon, label }) {
     <button
       onClick={onClick}
       className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${active
-          ? "bg-brand-600 text-white"
-          : "text-slate-400 hover:text-white hover:bg-white/8"
+        ? "bg-brand-600 text-white"
+        : "text-slate-400 hover:text-white hover:bg-white/8"
         }`}
     >
       <span>{icon}</span>
