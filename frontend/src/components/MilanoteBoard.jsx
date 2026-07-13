@@ -47,6 +47,15 @@ const DEFAULT_SIZES = {
   CITATIONS: { w: 480, h: 520 },
 };
 
+// Fixed slot-heights used for items placed *inside* a Column card.
+// (The column itself grows automatically — see ColumnCard's ResizeObserver.)
+const COLUMN_ITEM_HEIGHTS = {
+  NOTE: 170,
+  TODO: 220,
+  IMAGE: 210,
+  LINK: 130,
+};
+
 // Meta for the nested-board opener tiles (no external component — just label/icon/accent)
 const MODULE_META = {
   CHARACTERS: { label: "Characters", icon: "👤", accent: "#e879f9" },
@@ -207,15 +216,45 @@ function TodoCard({ card, onChange, onDelete }) {
   );
 }
 
-// ── Column Card (holds Note / To-do items, natural drag-and-drop-in) ──────────
+// ── Column Card (holds Note / To-do / Image / Link items, auto-height) ────────
 
 function ColumnCard({ card, onChange, onDelete, isDragTarget }) {
   const items = card.items || [];
+  const contentRef = useRef(null);
+  const headerRef = useRef(null);
+
+  // Keep the latest height/onChange available inside the ResizeObserver
+  // callback without re-creating the observer on every render.
+  const liveRef = useRef({ h: card.h, onChange });
+  liveRef.current = { h: card.h, onChange };
+
+  // Column height auto-adjusts to fit its content — no internal scrolling.
+  useEffect(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl) return;
+
+    const measure = () => {
+      const headerH = headerRef.current?.offsetHeight || 0;
+      const contentH = contentEl.scrollHeight;
+      const newH = Math.max(200, headerH + contentH);
+      if (Math.abs(newH - liveRef.current.h) > 4) {
+        liveRef.current.onChange({ h: newH });
+      }
+    };
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(contentEl);
+    measure();
+    return () => ro.disconnect();
+  }, []);
 
   function addItem(type) {
-    const item = type === "NOTE"
-      ? { id: uuidv4(), type: "NOTE", content: "", color: NOTE_COLORS[0] }
-      : { id: uuidv4(), type: "TODO", title: "To-do", items: [] };
+    let item;
+    if (type === "NOTE") item = { id: uuidv4(), type: "NOTE", content: "", color: NOTE_COLORS[0] };
+    else if (type === "TODO") item = { id: uuidv4(), type: "TODO", title: "To-do", items: [] };
+    else if (type === "IMAGE") item = { id: uuidv4(), type: "IMAGE", src: "", caption: "" };
+    else if (type === "LINK") item = { id: uuidv4(), type: "LINK", url: "", title: "", favicon: "" };
+    else return;
     onChange({ items: [...items, item] });
   }
   function updateItem(id, patch) {
@@ -224,6 +263,13 @@ function ColumnCard({ card, onChange, onDelete, isDragTarget }) {
   function deleteItem(id) {
     onChange({ items: items.filter((it) => it.id !== id) });
   }
+
+  const itemButtons = [
+    { type: "NOTE", icon: "📝", label: "Note" },
+    { type: "TODO", icon: "✅", label: "To-do" },
+    { type: "IMAGE", icon: "🖼️", label: "Image" },
+    { type: "LINK", icon: "🔗", label: "Link" },
+  ];
 
   return (
     <div
@@ -236,7 +282,7 @@ function ColumnCard({ card, onChange, onDelete, isDragTarget }) {
         transition: "background 0.15s, border-color 0.15s",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid rgba(148,163,184,0.12)", flexShrink: 0 }}>
+      <div ref={headerRef} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid rgba(148,163,184,0.12)", flexShrink: 0 }}>
         <span style={{ fontSize: 13 }}>📋</span>
         <input value={card.label} onChange={(e) => onChange({ label: e.target.value })} placeholder="Column name…" onClick={(e) => e.stopPropagation()}
           style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#cbd5e1", fontWeight: 700, fontSize: 13, letterSpacing: 0.3, textTransform: "uppercase" }} />
@@ -245,31 +291,35 @@ function ColumnCard({ card, onChange, onDelete, isDragTarget }) {
       </div>
 
       <div
-        data-scrollable
-        style={{ flex: 1, overflowY: "auto", padding: "10px", display: "flex", flexDirection: "column", gap: 10 }}
+        ref={contentRef}
+        style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 10 }}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
       >
         {items.map((item) => (
-          <div key={item.id} style={{ height: item.type === "TODO" ? 220 : 170, flexShrink: 0 }}>
+          <div key={item.id} style={{ height: COLUMN_ITEM_HEIGHTS[item.type] ?? 170, flexShrink: 0 }}>
             {item.type === "NOTE" && (
               <NoteCard card={item} onChange={(patch) => updateItem(item.id, patch)} onDelete={() => deleteItem(item.id)} />
             )}
             {item.type === "TODO" && (
               <TodoCard card={item} onChange={(patch) => updateItem(item.id, patch)} onDelete={() => deleteItem(item.id)} />
             )}
+            {item.type === "IMAGE" && (
+              <ImageCard card={item} onChange={(patch) => updateItem(item.id, patch)} onDelete={() => deleteItem(item.id)} />
+            )}
+            {item.type === "LINK" && (
+              <LinkCard card={item} onChange={(patch) => updateItem(item.id, patch)} onDelete={() => deleteItem(item.id)} />
+            )}
           </div>
         ))}
 
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => addItem("NOTE")}
-            style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(148,163,184,0.3)", borderRadius: 8, padding: "7px", color: "#64748b", fontSize: 11.5, cursor: "pointer" }}>
-            📝 + Note
-          </button>
-          <button onClick={() => addItem("TODO")}
-            style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(148,163,184,0.3)", borderRadius: 8, padding: "7px", color: "#64748b", fontSize: 11.5, cursor: "pointer" }}>
-            ✅ + To-do
-          </button>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {itemButtons.map((b) => (
+            <button key={b.type} onClick={() => addItem(b.type)}
+              style={{ flex: "1 1 45%", background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(148,163,184,0.3)", borderRadius: 8, padding: "7px", color: "#64748b", fontSize: 11.5, cursor: "pointer" }}>
+              {b.icon} + {b.label}
+            </button>
+          ))}
         </div>
       </div>
     </div>
@@ -440,6 +490,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
   const [hovered, setHovered] = useState(false);
 
   const isModule = MODULE_TYPES.includes(card.type);
+  const isColumn = card.type === "COLUMN";
   const canDropIntoColumn = card.type === "NOTE" || card.type === "TODO";
 
   function handleMouseDown(e) {
@@ -480,7 +531,13 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
     resizeRef.current = { active: true, startX: e.clientX, startY: e.clientY, origW: card.w, origH: card.h };
     function onMove(ev) {
       if (!resizeRef.current.active) return;
-      onChange({ w: Math.max(180, resizeRef.current.origW + (ev.clientX - resizeRef.current.startX) / zoom), h: Math.max(100, resizeRef.current.origH + (ev.clientY - resizeRef.current.startY) / zoom) });
+      const patch = { w: Math.max(180, resizeRef.current.origW + (ev.clientX - resizeRef.current.startX) / zoom) };
+      // Columns manage their own height automatically based on content —
+      // only let the user resize width, not height.
+      if (!isColumn) {
+        patch.h = Math.max(100, resizeRef.current.origH + (ev.clientY - resizeRef.current.startY) / zoom);
+      }
+      onChange(patch);
     }
     function onUp() { resizeRef.current.active = false; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); }
     window.addEventListener("mousemove", onMove);
@@ -501,7 +558,7 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
         boxShadow: selected
           ? `0 0 0 2px ${accentColor ?? '#818cf8'}, 0 12px 40px rgba(0,0,0,0.6)`
           : "0 4px 24px rgba(0,0,0,0.4)",
-        transition: "box-shadow 0.15s",
+        transition: "box-shadow 0.15s, height 0.12s ease-out",
         cursor: "grab",
       }}
       onMouseDown={handleMouseDown}
@@ -534,7 +591,8 @@ function BoardCard({ card, onChange, onDelete, onBringToFront, selected, onSelec
 
       {/* Resize handle */}
       <div onMouseDown={handleResizeDown}
-        style={{ position: "absolute", bottom: 0, right: 0, width: 18, height: 18, cursor: "nwse-resize", zIndex: 30, display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: 3 }}>
+        title={isColumn ? "Drag to resize width" : "Drag to resize"}
+        style={{ position: "absolute", bottom: 0, right: 0, width: 18, height: 18, cursor: isColumn ? "ew-resize" : "nwse-resize", zIndex: 30, display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: 3 }}>
         <svg width="9" height="9" viewBox="0 0 9 9" style={{ opacity: 0.35 }}>
           <path d="M1 8L8 1M4.5 8L8 4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
