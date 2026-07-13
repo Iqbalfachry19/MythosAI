@@ -966,6 +966,102 @@ function BoardCanvas({ cards, setCards, connections, setConnections, showModuleT
   );
 }
 
+// ── Module board templates ──────────────────────────────────────────────────
+// When a module tile (Characters, Outline, World, Locations, Ideas & Goals,
+// Citations) is opened for the first time, its nested board is seeded with a
+// context-appropriate starter layout of Columns / Notes / Images / Links / To-dos.
+
+function moduleCard(type, x, y, extra = {}) {
+  const size = DEFAULT_SIZES[type] ?? { w: 240, h: 160 };
+  return {
+    id: uuidv4(), type, x, y, w: size.w, h: size.h,
+    zIndex: Date.now() + Math.floor(Math.random() * 1000),
+    createdAt: new Date().toISOString(),
+    ...extra,
+  };
+}
+function tplNote(content, colorIdx = 0) {
+  return { id: uuidv4(), type: "NOTE", content, color: NOTE_COLORS[colorIdx] };
+}
+function tplTodo(title, checklist = []) {
+  return { id: uuidv4(), type: "TODO", title, items: checklist.map((t) => ({ id: uuidv4(), text: t, done: false })) };
+}
+function tplImage(caption = "") {
+  return { id: uuidv4(), type: "IMAGE", src: "", caption };
+}
+function tplLink(title = "", url = "") {
+  return { id: uuidv4(), type: "LINK", url, title, favicon: "" };
+}
+function tplColumn(label, items, x, y = 40) {
+  return moduleCard("COLUMN", x, y, { label, items });
+}
+
+function buildModuleTemplate(type) {
+  switch (type) {
+    case "CHARACTERS":
+      return [
+        tplColumn("Protagonists", [
+          tplNote("Name:\nAge:\nRole:\nMotivation:\nArc:"),
+          tplTodo("Traits", ["Strength", "Flaw", "Fear", "Goal"]),
+        ], 40),
+        tplColumn("Antagonists", [
+          tplNote("Name:\nAge:\nRole:\nMotivation:\nWeakness:"),
+        ], 360),
+        tplColumn("Supporting Cast", [
+          tplNote("Name:\nRelation to protagonist:\nPurpose in story:"),
+        ], 680),
+        moduleCard("IMAGE", 1000, 40, { caption: "Character portrait reference" }),
+      ];
+    case "OUTLINE":
+      return [
+        tplColumn("Act 1 — Setup", [
+          tplTodo("Key Beats", ["Inciting incident", "Establish protagonist", "Establish world"]),
+        ], 40),
+        tplColumn("Act 2 — Confrontation", [
+          tplTodo("Key Beats", ["Rising action", "Midpoint twist", "Low point / all is lost"]),
+        ], 360),
+        tplColumn("Act 3 — Resolution", [
+          tplTodo("Key Beats", ["Climax", "Falling action", "Resolution"]),
+        ], 680),
+      ];
+    case "WORLD":
+      return [
+        tplColumn("Geography", [tplNote("Regions:\nClimate:\nLandmarks:")], 40),
+        tplColumn("Culture & Society", [tplNote("Government:\nReligion:\nCustoms:\nLanguage:")], 360),
+        tplColumn("Magic / Technology", [tplNote("Rules:\nLimitations:\nCost:")], 680),
+        moduleCard("IMAGE", 1000, 40, { caption: "World map" }),
+      ];
+    case "LOCATIONS":
+      return [
+        tplColumn("Key Locations", [
+          tplNote("Name:\nDescription:\nSignificance to story:"),
+          tplImage("Location reference photo"),
+          tplLink("Map reference", ""),
+        ], 40),
+        tplColumn("Atmosphere & Sensory Notes", [
+          tplNote("Sights:\nSounds:\nSmells:\nMood:"),
+        ], 360),
+      ];
+    case "IDEAS":
+      return [
+        tplColumn("Ideas", [tplTodo("Brainstorm", ["Idea 1", "Idea 2", "Idea 3"])], 40),
+        tplColumn("Goals", [tplTodo("Milestones", ["Goal 1", "Goal 2"])], 360),
+        tplColumn("Open Questions", [tplNote("")], 680),
+      ];
+    case "CITATIONS":
+      return [
+        tplColumn("Sources", [
+          tplLink("Source 1", ""),
+          tplLink("Source 2", ""),
+          tplNote("Citation format: APA / MLA / Chicago"),
+        ], 40),
+        tplColumn("Quotes", [tplNote("")], 360),
+      ];
+    default:
+      return [];
+  }
+}
+
 // ── Main MilanoteBoard ────────────────────────────────────────────────────────
 
 export default function MilanoteBoard() {
@@ -977,7 +1073,19 @@ export default function MilanoteBoard() {
   const [openModuleType, setOpenModuleType] = useState(null);   // null = on the top board, else module key
   const [openModuleCardId, setOpenModuleCardId] = useState(null); // which tile's nested board is open
 
-  function openModule(type, cardId) { setOpenModuleType(type); setOpenModuleCardId(cardId); setEditingName(false); }
+  function openModule(type, cardId) {
+    // First time this tile is opened (its nested board is still empty), seed it
+    // with a starter template of Columns/Notes/Images/Links/To-dos matching the
+    // module's context.
+    setCards((arr) => arr.map((c) => {
+      if (c.id !== cardId) return c;
+      if ((c.boardCards || []).length > 0) return c;
+      return { ...c, boardCards: buildModuleTemplate(type), boardConnections: c.boardConnections || [] };
+    }));
+    setOpenModuleType(type);
+    setOpenModuleCardId(cardId);
+    setEditingName(false);
+  }
   function closeModule() { setOpenModuleType(null); setOpenModuleCardId(null); }
 
   // Wrappers so a nested board can be given cards/setCards just like the top-level one,
